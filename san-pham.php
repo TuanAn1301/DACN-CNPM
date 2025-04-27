@@ -175,7 +175,7 @@ $sanphamlienquan = queryResult($conn, $sql_sanphamlienquan);
                                 </div>
                                 <div class="product-card--body">
                                     <div class="card-image">
-                                        <img src="http://localhost/webbansach/<?php echo $row['anhchinh']; ?>" alt="" style="height: 350px;">
+                                        <img src="http://localhost/webbansach/image/logo.png<?php echo $row['anhchinh']; ?>" alt="" style="height: 350px;">
                                     </div>
                                     <div class="price-block">
                                         <span class="price"><?php echo number_format($row['giaban']); ?>đ</span>
