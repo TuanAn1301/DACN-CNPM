@@ -1,0 +1,16 @@
+[2025-11-08 08:05:40] 🔄 Bước 1: Đang khởi tạo trình duyệt Chrome...
+[2025-11-08 08:05:44] 🌐 Bước 2: Đang mở trang liên hệ...
+[2025-11-08 08:05:53] 📝 Bước 3: Đang điền thông tin liên hệ...
+[2025-11-08 08:05:54] 📸 Đã lưu ảnh form đã điền: screenshots\form_filled_1762563954.png
+[2025-11-08 08:05:54] 🚀 Bước 4: Đang tìm và nhấn nút gửi tin nhắn...
+[2025-11-08 08:05:55] 📸 Đã lưu ảnh trước khi gửi: screenshots\before_submit_1762563955.png
+[2025-11-08 08:05:55] ✅ Đã nhấn nút gửi tin nhắn
+[2025-11-08 08:05:55] ✅ Thông báo thành công: Gửi thành công! Cảm ơn bạn đã liên hệ với chúng tôi. Chúng tôi sẽ phản hồi trong thời gian sớm nhất!
+×
+[2025-11-08 08:05:55] 📸 Đã lưu ảnh thông báo thành công: screenshots\success_1762563955.png
+[2025-11-08 08:05:55] 🔄 Bước 5: Đang xác minh kết quả...
+[2025-11-08 08:05:56] 📸 Đã lưu ảnh sau khi gửi: screenshots\after_submit_1762563955.png
+[2025-11-08 08:05:56] ✅ Gửi tin nhắn thành công!
+[2025-11-08 08:05:56] 📄 Đã lưu báo cáo kiểm thử: screenshots\test_log_1762563940_report.txt
+[2025-11-08 08:05:56] 📊 Đã lưu báo cáo Excel: screenshots\test_log_1762563940_report.xlsx
+[2025-11-08 08:05:58] 👋 Đã đóng trình duyệt

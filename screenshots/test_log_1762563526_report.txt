@@ -1,0 +1,57 @@
+
+==================================================
+📝 BÁO CÁO KIỂM THỰC THI
+==================================================
+Thời gian bắt đầu: 2025-11-08 07:58:46
+Thời gian kết thúc: 2025-11-08 07:59:05
+Trạng thái: ❌ THẤT BẠI
+
+📋 CHI TIẾT CÁC BƯỚC KIỂM THỬ:
+
+--- Bước 2: Mở trang liên hệ ✅
+   • Mong đợi: Trang liên hệ được tải thành công
+   • Thực tế: Trang đã được tải thành công
+   • Trạng thái: Thành công
+
+--- Bước 3: Điền thông tin liên hệ ✅
+   • Mong đợi: Điền đầy đủ thông tin vào form
+   • Thực tế: Đã điền đầy đủ thông tin vào form
+   • Trạng thái: Thành công
+
+--- Bước 4: Nhấn nút gửi tin nhắn ❌
+   • Mong đợi: Nhấn nút gửi tin nhắn thành công
+   • Thực tế: Lỗi khi nhấn nút gửi: Message: element click intercepted: Element <button type="submit" class="btn btn-outlined--primary btn-contact">...</button> is not clickable at point (544, 25). Other element would receive the click: <div class="col-lg-4">...</div>
+  (Session info: chrome=131.0.6778.205); For documentation on this error, please visit: https://www.selenium.dev/documentation/webdriver/troubleshooting/errors#elementclickinterceptedexception
+Stacktrace:
+	GetHandleVerifier [0x00D6FD53+23747]
+	(No symbol) [0x00CF7D54]
+	(No symbol) [0x00BCBE53]
+	(No symbol) [0x00C15C57]
+	(No symbol) [0x00C140C3]
+	(No symbol) [0x00C11CCD]
+	(No symbol) [0x00C11034]
+	(No symbol) [0x00C05F57]
+	(No symbol) [0x00C31DFC]
+	(No symbol) [0x00C059A4]
+	(No symbol) [0x00C32094]
+	(No symbol) [0x00C4B41E]
+	(No symbol) [0x00C31B96]
+	(No symbol) [0x00C03F3C]
+	(No symbol) [0x00C04EBD]
+	GetHandleVerifier [0x0104AC73+3017699]
+	GetHandleVerifier [0x0105B93B+3086507]
+	GetHandleVerifier [0x010540F2+3055714]
+	GetHandleVerifier [0x00E05AF0+637536]
+	(No symbol) [0x00D00A5D]
+	(No symbol) [0x00CFDA28]
+	(No symbol) [0x00CFDBC5]
+	(No symbol) [0x00CF07F0]
+	BaseThreadInitThunk [0x75AE5D49+25]
+	RtlInitializeExceptionChain [0x7787D6DB+107]
+	RtlGetAppContainerNamedObjectPath [0x7787D661+561]
+
+   • Trạng thái: Thất bại
+
+==================================================
+📂 File log đầy đủ: C:\xampp\htdocs\webbansach\screenshots\test_log_1762563526.txt
+==================================================

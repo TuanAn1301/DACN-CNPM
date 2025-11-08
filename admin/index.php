@@ -19,6 +19,10 @@ $slkh = (int) queryResult($conn, $sql_kh)->fetch_assoc()['kh'];
 
 $sql_slbc = "SELECT sanpham.tensanpham, COUNT(chitietdonhang.masanpham) AS sl, SUM(chitietdonhang.giatien) AS tt FROM `chitietdonhang`, `sanpham` WHERE chitietdonhang.masanpham = sanpham.masanpham GROUP BY(chitietdonhang.masanpham) LIMIT 7";
 $slbc = queryResult($conn, $sql_slbc);
+
+// Thống kê nhân viên
+$sql_nv = "SELECT COUNT(*) AS nv FROM nhanvien";
+$slnv = (int) (queryResult($conn, $sql_nv)->fetch_assoc()['nv'] ?? 0);
 ?>
 
 <div class="page-wrapper">
@@ -57,6 +61,9 @@ $slbc = queryResult($conn, $sql_slbc);
                                 <li class="feed-item">
                                     <div class="feed-icon bg-danger"><i class="ti-user"></i></div> Số lượng khách hàng mới trong hôm nay là: <?php echo $slkh; ?> khách hàng <span class="ms-auto font-12 text-muted"></span>
                                 </li>
+                                <li class="feed-item">
+                                    <div class="feed-icon bg-primary"><i class="ti-id-badge"></i></div> Tổng số nhân viên: <?php echo $slnv; ?> <span class="ms-auto font-12 text-muted"></span>
+                                </li>
                             </ul>
                         </div>
                     </div>
@@ -65,3 +72,5 @@ $slbc = queryResult($conn, $sql_slbc);
         </div>
     </div>
 </div>
+
+<?php require(__DIR__.'/layouts/footer.php'); ?>

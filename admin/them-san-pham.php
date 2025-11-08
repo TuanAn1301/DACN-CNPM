@@ -14,19 +14,51 @@ if($_SERVER['REQUEST_METHOD'] == 'POST'){
 	$machuyenmuc = $_POST['machuyenmuc'];
 	$tag = $_POST['tag'];
     $loaisanpham = $_POST['loaisanpham'];
-	$anhchinh = 'admin/upload/a'. $_FILES['anhchinh']['name'];
-	$anhphu1 = 'admin/upload/b'. $_FILES['anhphu1']['name'];
-	$anhphu2 = 'admin/upload/c'. $_FILES['anhphu2']['name'];
-	$anhphu3 = 'admin/upload/d'. $_FILES['anhphu3']['name'];
-	$anhphu4 = 'admin/upload/e'. $_FILES['anhphu4']['name'];
-	move_uploaded_file($_FILES['anhchinh']['tmp_name'], 'upload/a'. $_FILES['anhchinh']['name']);
-	move_uploaded_file($_FILES['anhphu1']['tmp_name'], 'upload/b' . $_FILES['anhphu1']['name']);
-	move_uploaded_file($_FILES['anhphu2']['tmp_name'], 'upload/c' . $_FILES['anhphu2']['name']);
-	move_uploaded_file($_FILES['anhphu3']['tmp_name'], 'upload/d' . $_FILES['anhphu3']['name']);
-	move_uploaded_file($_FILES['anhphu4']['tmp_name'], 'upload/e' . $_FILES['anhphu4']['name']);
+
+	// Ensure upload dir exists (admin/upload)
+	$uploadDir = __DIR__ . '/upload';
+	if (!is_dir($uploadDir)) { @mkdir($uploadDir, 0777, true); }
+
+	function make_unique_name($prefix, $originalName) {
+		$ext = pathinfo($originalName, PATHINFO_EXTENSION);
+		$base = pathinfo($originalName, PATHINFO_FILENAME);
+		$base = preg_replace('/[^a-zA-Z0-9_-]+/', '-', $base);
+		return $prefix . $base . '-' . uniqid() . ($ext ? ('.' . $ext) : '');
+	}
+
+	// Build unique filenames and move files into admin/upload
+	$fn_main = make_unique_name('a-', $_FILES['anhchinh']['name']);
+	$fn_1   = make_unique_name('b-', $_FILES['anhphu1']['name']);
+	$fn_2   = make_unique_name('c-', $_FILES['anhphu2']['name']);
+	$fn_3   = make_unique_name('d-', $_FILES['anhphu3']['name']);
+	$fn_4   = make_unique_name('e-', $_FILES['anhphu4']['name']);
+
+	move_uploaded_file($_FILES['anhchinh']['tmp_name'], $uploadDir . '/' . $fn_main);
+	move_uploaded_file($_FILES['anhphu1']['tmp_name'], $uploadDir . '/' . $fn_1);
+	move_uploaded_file($_FILES['anhphu2']['tmp_name'], $uploadDir . '/' . $fn_2);
+	move_uploaded_file($_FILES['anhphu3']['tmp_name'], $uploadDir . '/' . $fn_3);
+	move_uploaded_file($_FILES['anhphu4']['tmp_name'], $uploadDir . '/' . $fn_4);
+
+	// Store relative web paths in DB (relative to web root)
+	$anhchinh = 'admin/upload/' . $fn_main;
+	$anhphu1  = 'admin/upload/' . $fn_1;
+	$anhphu2  = 'admin/upload/' . $fn_2;
+	$anhphu3  = 'admin/upload/' . $fn_3;
+	$anhphu4  = 'admin/upload/' . $fn_4;
 
 	$sql_insert = "INSERT INTO `sanpham`(`tensanpham`, `giagoc`, `giaban`, `machuyenmuc`, `tag`, `mota`, `anhchinh`, `anhphu1`, `anhphu2`, `anhphu3`, `anhphu4`, `motachitiet`, `loaisanpham`) VALUES ('".$tensanpham."','".$giagoc."','".$giaban."','".$machuyenmuc."','".$tag."','".$motangan."','".$anhchinh."','".$anhphu1."','".$anhphu2."','".$anhphu3."','".$anhphu4."','".$motachitiet."',".$loaisanpham.")";
-	queryExecute($conn,$sql_insert);
+	
+	if(queryExecute($conn,$sql_insert)){
+		// Lấy mã sản phẩm vừa thêm
+		$masanpham = $conn->insert_id;
+		
+		// Gửi thông báo đến tất cả email đăng ký
+		require_once('gui-thong-bao-sach-moi.php');
+		$result = guiThongBaoSachMoi($masanpham, $tensanpham, $giaban, $anhchinh, $motangan);
+		
+		// Log kết quả (có thể bỏ qua nếu không muốn hiển thị)
+		// echo "<script>console.log('Email sent: " . json_encode($result) . "');</script>";
+	}
 }
 
 

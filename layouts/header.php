@@ -24,9 +24,188 @@ $chuyenmuc = queryResult($conn,$sql_chuyenmuc);
     <link rel="stylesheet" type="text/css" media="screen" href="css/plugins.css" />
     <link rel="stylesheet" type="text/css" media="screen" href="css/main.css" />
     <link rel="shortcut icon" type="image/x-icon" href="image/favicon.ico">
+    <link rel="stylesheet" type="text/css" media="screen" href="css/toast.css" />
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0-beta3/css/all.min.css">
 </head>
 
 <body>
+    <script>
+    // Dọn các sản phẩm thêm từ banner trên mọi trang KHÔNG PHẢI giỏ hàng / thanh toán
+    (function(){
+        function removeBannerProductsFromCart(){
+            try {
+                var bannerItems = [];
+                try { bannerItems = JSON.parse(localStorage.getItem('bannerItems') || '[]'); } catch(e) { bannerItems = []; }
+                if(!Array.isArray(bannerItems) || bannerItems.length === 0) return;
+                var cartStr = localStorage.getItem('giohang');
+                if(!cartStr) return;
+                var cart = JSON.parse(cartStr);
+                var filtered = cart.filter(function(item){
+                    return bannerItems.indexOf(String(item.masanpham)) === -1 && bannerItems.indexOf(Number(item.masanpham)) === -1;
+                });
+                localStorage.setItem('giohang', JSON.stringify(filtered));
+                localStorage.setItem('bannerAdded','0');
+                localStorage.removeItem('bannerItems');
+                localStorage.removeItem('bannerTransition');
+            } catch(e) {}
+        }
+
+        document.addEventListener('DOMContentLoaded', function(){
+            try {
+                var path = (location.pathname || '').toLowerCase();
+                var isCart = path.indexOf('gio-hang.php') !== -1;
+                var isCheckout = path.indexOf('thanh-toan.php') !== -1;
+                var bannerAdded = localStorage.getItem('bannerAdded') === '1';
+                if(bannerAdded && !(isCart || isCheckout)){
+                    removeBannerProductsFromCart();
+                }
+            } catch(e) {}
+        });
+    })();
+    </script>
+    <div id="toast-container"></div>
+    <script>
+    (function(){
+        // Icons for different toast types
+        const icons = {
+            success: '<i class="fas fa-check-circle"></i>',
+            error: '<i class="fas fa-exclamation-circle"></i>',
+            warning: '<i class="fas fa-exclamation-triangle"></i>',
+            info: '<i class="fas fa-info-circle"></i>'
+        };
+
+        // Ensure toast container exists
+        function ensureToastContainer() {
+            let container = document.getElementById('toast-container');
+            if (!container) {
+                container = document.createElement('div');
+                container.id = 'toast-container';
+                document.body.appendChild(container);
+            }
+            return container;
+        }
+
+        // Show toast function
+        window.showToast = function(type, message, title, duration = 5000) {
+            const container = ensureToastContainer();
+            const toast = document.createElement('div');
+            
+            // Set toast classes
+            toast.className = `toast ${type} show`;
+            
+            // Create toast HTML
+            toast.innerHTML = `
+                <span class="toast-icon">${icons[type] || icons.info}</span>
+                <div class="toast-content">
+                    ${title ? `<div class="toast-title">${title}</div>` : ''}
+                    <div class="toast-message">${message}</div>
+                </div>
+                <button class="toast-close">&times;</button>
+                <div class="toast-progress"></div>
+            `;
+            
+            // Add to container
+            container.appendChild(toast);
+            
+            // Start progress bar animation
+            const progressBar = toast.querySelector('.toast-progress');
+            if (progressBar) {
+                progressBar.style.animation = `progress ${duration}ms linear forwards`;
+            }
+            
+            // Auto hide after duration
+            const hideTimer = setTimeout(() => {
+                hideToast(toast);
+            }, duration);
+            
+            // Close button event
+            const closeBtn = toast.querySelector('.toast-close');
+            if (closeBtn) {
+                closeBtn.addEventListener('click', () => {
+                    clearTimeout(hideTimer);
+                    hideToast(toast);
+                });
+            }
+            
+            // Pause on hover
+            toast.addEventListener('mouseenter', () => {
+                clearTimeout(hideTimer);
+                if (progressBar) {
+                    const progress = getComputedStyle(progressBar).transform;
+                    progressBar.style.transform = progress;
+                    progressBar.style.animationPlayState = 'paused';
+                }
+            });
+            
+            toast.addEventListener('mouseleave', () => {
+                const remaining = getRemainingTime(toast, duration);
+                if (progressBar) {
+                    progressBar.style.animation = `progress ${remaining}ms linear forwards`;
+                }
+                setTimeout(() => {
+                    hideToast(toast);
+                }, remaining);
+            });
+            
+            // Remove toast after animation
+            toast.addEventListener('animationend', (e) => {
+                if (e.animationName === 'slideOutRight') {
+                    toast.remove();
+                }
+            });
+            
+            return toast;
+        };
+        
+        // Helper to get remaining time for progress bar
+        function getRemainingTime(toast, totalDuration) {
+            const startTime = parseInt(toast.getAttribute('data-start-time') || Date.now());
+            const elapsed = Date.now() - startTime;
+            return Math.max(0, totalDuration - elapsed);
+        }
+        
+        // Hide toast with animation
+        function hideToast(toast) {
+            toast.classList.remove('show');
+            toast.classList.add('hide');
+        }
+        
+        // Queue toast across page reloads
+        window.queueToast = function(type, message, title, duration = 5000) {
+            try {
+                sessionStorage.setItem('pendingToast', JSON.stringify({ 
+                    type: type, 
+                    message: message, 
+                    title: title, 
+                    duration: duration 
+                }));
+            } catch(e) {
+                console.error('Failed to queue toast:', e);
+            }
+        };
+        
+        // Show pending toasts on page load
+        document.addEventListener('DOMContentLoaded', function() {
+            try {
+                const pending = sessionStorage.getItem('pendingToast');
+                if (pending) {
+                    const data = JSON.parse(pending);
+                    if (data && data.message) {
+                        window.showToast(
+                            data.type || 'info', 
+                            data.message, 
+                            data.title, 
+                            data.duration
+                        );
+                    }
+                    sessionStorage.removeItem('pendingToast');
+                }
+            } catch(e) {
+                console.error('Error showing pending toast:', e);
+            }
+        });
+    })();
+    </script>
     <div class="site-wrapper" id="top">
         <div class="site-header d-none d-lg-block">
             <div class="header-middle pt--10 pb--10">
@@ -44,7 +223,7 @@ $chuyenmuc = queryResult($conn,$sql_chuyenmuc);
                                 </div>
                                 <div class="text">
                                     <p>Hỗ trợ 24/7</p>
-                                    <p class="font-weight-bold number">0988.888.999</p>
+                                    <p class="font-weight-bold number">0397172952</p>
                                 </div>
                             </div>
                         </div>
@@ -80,7 +259,7 @@ $chuyenmuc = queryResult($conn,$sql_chuyenmuc);
                                             class="fa fa-bars"></i>Chuyên Mục</a>
                                     <ul class="category-menu">
                                         <?php while($row = $chuyenmuc->fetch_assoc()){ ?>
-                                            <li class="cat-item "><a href="chuyen-muc.php?id=<?php echo $row['machuyenmuc']; ?>"><?php echo $row['tenchuyenmuc']; ?></a></li>
+                                            <li class="cat-item "><a href="tim-kiem.php?cm=<?php echo $row['machuyenmuc']; ?>"><?php echo $row['tenchuyenmuc']; ?></a></li>
                                         <?php } ?>
                                     </ul>
                                 </div>
@@ -89,6 +268,9 @@ $chuyenmuc = queryResult($conn,$sql_chuyenmuc);
                         <div class="col-lg-5">
                             <form method="GET" action="tim-kiem.php">
                                 <div class="header-search-block">
+                                    <?php if (isset($_GET['cm'])) { ?>
+                                        <input type="hidden" name="cm" value="<?php echo (int)$_GET['cm']; ?>">
+                                    <?php } ?>
                                     <input type="text" placeholder="Tìm kiếm sản phẩm..." name="tensach">
                                     <button type="submit">Tìm Kiếm</button>
                                 </div>
@@ -155,7 +337,7 @@ $chuyenmuc = queryResult($conn,$sql_chuyenmuc);
                                             class="fa fa-bars"></i>Chuyên Mục</a>
                                     <ul class="category-menu">
                                         <?php while($row = $chuyenmuc->fetch_assoc()){ ?>
-                                            <li class="cat-item "><a href="chuyen-muc.php?id=<?php echo $row['machuyenmuc']; ?>"><?php echo $row['tenchuyenmuc']; ?></a></li>
+                                            <li class="cat-item "><a href="tim-kiem.php?cm=<?php echo $row['machuyenmuc']; ?>"><?php echo $row['tenchuyenmuc']; ?></a></li>
                                         <?php } ?>
                                     </ul>
                                 </div>
@@ -217,8 +399,8 @@ $chuyenmuc = queryResult($conn,$sql_chuyenmuc);
                     
                     <div class="off-canvas-bottom">
                         <div class="contact-list mb--10">
-                            <a href="" class="sin-contact"><i class="fas fa-mobile-alt"></i>0988.888.999</a>
-                            <a href="" class="sin-contact"><i class="fas fa-envelope"></i>hotro@pustok.com</a>
+                            <a href="" class="sin-contact"><i class="fas fa-mobile-alt"></i>0397172952</a>
+                            <a href="" class="sin-contact"><i class="fas fa-envelope"></i>ntquan2711@gmail.com</a>
                         </div>
                         <div class="off-canvas-social">
                             <a href="#" class="single-icon"><i class="fab fa-facebook-f"></i></a>
@@ -251,6 +433,9 @@ $chuyenmuc = queryResult($conn,$sql_chuyenmuc);
                                     <!-- Shop -->
                                     <li class="menu-item">
                                         <a href="tat-ca-san-pham.php">Sản Phẩm</a>
+                                    </li>
+                                    <li class="menu-item">
+                                        <a href="nhan-vien.php">Nhân Viên</a>
                                     </li>
                                     <li class="menu-item">
                                         <a href="lien-he.php">Liên Hệ</a>

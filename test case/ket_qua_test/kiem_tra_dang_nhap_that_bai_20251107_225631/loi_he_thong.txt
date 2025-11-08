@@ -1,0 +1,103 @@
+Thời gian lỗi: 2025-11-07 22:56:42
+Lỗi: Message: no such window: target window already closed
+from unknown error: web view not found
+  (Session info: chrome=131.0.6778.205)
+Stacktrace:
+	GetHandleVerifier [0x0055FD53+23747]
+	(No symbol) [0x004E7D54]
+	(No symbol) [0x003BBE53]
+	(No symbol) [0x0039D91B]
+	(No symbol) [0x00427EFF]
+	(No symbol) [0x0043AD49]
+	(No symbol) [0x00421B96]
+	(No symbol) [0x003F3F3C]
+	(No symbol) [0x003F4EBD]
+	GetHandleVerifier [0x0083AC73+3017699]
+	GetHandleVerifier [0x0084B93B+3086507]
+	GetHandleVerifier [0x008440F2+3055714]
+	GetHandleVerifier [0x005F5AF0+637536]
+	(No symbol) [0x004F0A5D]
+	(No symbol) [0x004EDA28]
+	(No symbol) [0x004EDBC5]
+	(No symbol) [0x004E07F0]
+	BaseThreadInitThunk [0x77595D49+25]
+	RtlInitializeExceptionChain [0x77DDD6DB+107]
+	RtlGetAppContainerNamedObjectPath [0x77DDD661+561]
+
+
+=== TRACE BACK ===
+Traceback (most recent call last):
+  File "c:\xampp\htdocs\webbansach\test case\đăng nhập\kiem_tra_dang_nhap_that_bai.py", line 306, in main
+    WebDriverWait(driver, 5).until(
+  File "C:\Users\MIS\AppData\Local\Programs\Python\Python310\lib\site-packages\selenium\webdriver\support\wait.py", line 129, in until
+    value = method(self._driver)
+  File "c:\xampp\htdocs\webbansach\test case\đăng nhập\kiem_tra_dang_nhap_that_bai.py", line 307, in <lambda>
+    lambda d: "thất bại" in d.page_source.lower() or
+  File "C:\Users\MIS\AppData\Local\Programs\Python\Python310\lib\site-packages\selenium\webdriver\remote\webdriver.py", line 597, in page_source
+    return self.execute(Command.GET_PAGE_SOURCE)["value"]
+  File "C:\Users\MIS\AppData\Local\Programs\Python\Python310\lib\site-packages\selenium\webdriver\remote\webdriver.py", line 458, in execute
+    self.error_handler.check_response(response)
+  File "C:\Users\MIS\AppData\Local\Programs\Python\Python310\lib\site-packages\selenium\webdriver\remote\errorhandler.py", line 233, in check_response
+    raise exception_class(message, screen, stacktrace)
+selenium.common.exceptions.NoSuchWindowException: Message: no such window: target window already closed
+from unknown error: web view not found
+  (Session info: chrome=131.0.6778.205)
+Stacktrace:
+	GetHandleVerifier [0x0055FD53+23747]
+	(No symbol) [0x004E7D54]
+	(No symbol) [0x003BBE53]
+	(No symbol) [0x0039D91B]
+	(No symbol) [0x00427EFF]
+	(No symbol) [0x0043AD49]
+	(No symbol) [0x00421B96]
+	(No symbol) [0x003F3F3C]
+	(No symbol) [0x003F4EBD]
+	GetHandleVerifier [0x0083AC73+3017699]
+	GetHandleVerifier [0x0084B93B+3086507]
+	GetHandleVerifier [0x008440F2+3055714]
+	GetHandleVerifier [0x005F5AF0+637536]
+	(No symbol) [0x004F0A5D]
+	(No symbol) [0x004EDA28]
+	(No symbol) [0x004EDBC5]
+	(No symbol) [0x004E07F0]
+	BaseThreadInitThunk [0x77595D49+25]
+	RtlInitializeExceptionChain [0x77DDD6DB+107]
+	RtlGetAppContainerNamedObjectPath [0x77DDD661+561]
+
+
+During handling of the above exception, another exception occurred:
+
+Traceback (most recent call last):
+  File "c:\xampp\htdocs\webbansach\test case\đăng nhập\kiem_tra_dang_nhap_that_bai.py", line 361, in main
+    f.write(driver.page_source)
+  File "C:\Users\MIS\AppData\Local\Programs\Python\Python310\lib\site-packages\selenium\webdriver\remote\webdriver.py", line 597, in page_source
+    return self.execute(Command.GET_PAGE_SOURCE)["value"]
+  File "C:\Users\MIS\AppData\Local\Programs\Python\Python310\lib\site-packages\selenium\webdriver\remote\webdriver.py", line 458, in execute
+    self.error_handler.check_response(response)
+  File "C:\Users\MIS\AppData\Local\Programs\Python\Python310\lib\site-packages\selenium\webdriver\remote\errorhandler.py", line 233, in check_response
+    raise exception_class(message, screen, stacktrace)
+selenium.common.exceptions.NoSuchWindowException: Message: no such window: target window already closed
+from unknown error: web view not found
+  (Session info: chrome=131.0.6778.205)
+Stacktrace:
+	GetHandleVerifier [0x0055FD53+23747]
+	(No symbol) [0x004E7D54]
+	(No symbol) [0x003BBE53]
+	(No symbol) [0x0039D91B]
+	(No symbol) [0x00427EFF]
+	(No symbol) [0x0043AD49]
+	(No symbol) [0x00421B96]
+	(No symbol) [0x003F3F3C]
+	(No symbol) [0x003F4EBD]
+	GetHandleVerifier [0x0083AC73+3017699]
+	GetHandleVerifier [0x0084B93B+3086507]
+	GetHandleVerifier [0x008440F2+3055714]
+	GetHandleVerifier [0x005F5AF0+637536]
+	(No symbol) [0x004F0A5D]
+	(No symbol) [0x004EDA28]
+	(No symbol) [0x004EDBC5]
+	(No symbol) [0x004E07F0]
+	BaseThreadInitThunk [0x77595D49+25]
+	RtlInitializeExceptionChain [0x77DDD6DB+107]
+	RtlGetAppContainerNamedObjectPath [0x77DDD661+561]
+

@@ -7,9 +7,9 @@
                             <img src="image/logo--footer.png" alt="">
                         </div>
                         <div class="footer-contact">
-                            <p><span class="label">Địa Chỉ:</span><span class="text">Ngõ 58, Dịch Vọng Hậu, Cầu Giấy, Hà Nội</span></p>
-                            <p><span class="label">Số Điện Thoại:</span><span class="text">0988.888.999</span></p>
-                            <p><span class="label">Email:</span><span class="text">hotro@pustok.com</span></p>
+                            <p><span class="label">Địa Chỉ:</span><span class="text">Hà Nội</span></p>
+                            <p><span class="label">Số Điện Thoại:</span><span class="text">0397172952</span></p>
+                            <p><span class="label">Email:</span><span class="text">ntquan2711@gmail.com</span></p>
                         </div>
                     </div>
                 </div>
@@ -19,11 +19,11 @@
                             <h3>Thông Tin</h3>
                         </div>
                         <ul class="footer-list normal-list">
-                            <li><a href="">Giảm Giá</a></li>
-                            <li><a href="">Sản Phẩm Mới</a></li>
-                            <li><a href="">Siêu Giảm Giá</a></li>
-                            <li><a href="">Liên Hệ</a></li>
-                            <li><a href="">Sơ Đồ Trang</a></li>
+                            <li><a href="giam-gia.php">Giảm Giá</a></li>
+                            <li><a href="san-pham-moi.php">Sản Phẩm Mới</a></li>
+                            <li><a href="sieu-giam-gia.php">Siêu Giảm Giá</a></li>
+                            <li><a href="lien-he.php">Liên Hệ</a></li>
+                            <li><a href="so-do-trang.php">Sơ Đồ Trang</a></li>
                         </ul>
                     </div>
                 </div>
@@ -33,11 +33,11 @@
                             <h3>Giải Đáp</h3>
                         </div>
                         <ul class="footer-list normal-list">
-                            <li><a href="">Giao Hàng</a></li>
-                            <li><a href="">Về Chúng Tôi</a></li>
-                            <li><a href="">Cửa Hàng</a></li>
-                            <li><a href="">Liên Hệ</a></li>
-                            <li><a href="">Sơ Đồ Trang</a></li>
+                            <li><a href="giao-hang.php">Giao Hàng</a></li>
+                            <li><a href="ve-chung-toi.php">Về Chúng Tôi</a></li>
+                            <li><a href="cua-hang.php">Cửa Hàng</a></li>
+                            <li><a href="lien-he.php">Liên Hệ</a></li>
+                            <li><a href="so-do-trang.php">Sơ Đồ Trang</a></li>
                         </ul>
                     </div>
                 </div>
@@ -46,9 +46,9 @@
                         <h3>THÔNG BÁO</h3>
                     </div>
                     <div class="newsletter-form mb--30">
-                        <form action="./php/mail.php">
-                            <input type="email" class="form-control" placeholder="Nhập email của bạn...">
-                            <button class="btn btn--primary w-100">Đăng Ký</button>
+                        <form id="formDangKyNhanTin" method="POST">
+                            <input type="email" name="email" id="emailNhanTin" class="form-control" placeholder="Nhập email của bạn..." required>
+                            <button type="submit" class="btn btn--primary w-100">Đăng Ký</button>
                         </form>
                     </div>
                     <div class="social-block">
@@ -71,6 +71,43 @@
     <script src="https://ajax.googleapis.com/ajax/libs/jquery/3.6.3/jquery.min.js"></script>
     <script>
         $(document).ready(function() {
+            // Xử lý đăng ký nhận thông báo
+            $('#formDangKyNhanTin').on('submit', function(e) {
+                e.preventDefault();
+                var email = $('#emailNhanTin').val().trim();
+                
+                if (!email) {
+                    if (typeof window.showToast === 'function') {
+                        window.showToast('error', 'Vui lòng nhập email!', 'Thiếu thông tin');
+                    }
+                    return;
+                }
+                
+                $.ajax({
+                    url: 'php/dang-ky-nhan-tin.php',
+                    type: 'POST',
+                    data: { email: email },
+                    dataType: 'json',
+                    success: function(response) {
+                        if (response.success) {
+                            if (typeof window.showToast === 'function') {
+                                window.showToast('success', response.message || 'Đăng ký thành công!', 'Thành công');
+                            }
+                            $('#emailNhanTin').val('');
+                        } else {
+                            if (typeof window.showToast === 'function') {
+                                window.showToast('error', response.message || 'Có lỗi xảy ra!', 'Thất bại');
+                            }
+                        }
+                    },
+                    error: function() {
+                        if (typeof window.showToast === 'function') {
+                            window.showToast('error', 'Lỗi kết nối! Vui lòng thử lại.', 'Lỗi');
+                        }
+                    }
+                });
+            });
+            
             var giohang = localStorage.getItem('giohang')
 
             if(giohang == null){

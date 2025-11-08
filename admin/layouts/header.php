@@ -1,10 +1,27 @@
 <?php
 session_start();
 if(!isset($_SESSION["login"])){
-    header("Location: ../admin/dang-nhap.php");
+    header("Location: dang-nhap.php");
     die();  
 }
 
+// Determine if current user is admin with manhanvien = 1
+$__IS_EMP_ADMIN = false;
+try {
+    require_once(__DIR__ . '/../../database/connect.php');
+    if(isset($_SESSION['user'])){
+        $u = $_SESSION['user'];
+        if($stmt = $conn->prepare('SELECT manhanvien FROM nhanvien WHERE taikhoan = ? LIMIT 1')){
+            $stmt->bind_param('s', $u);
+            $stmt->execute();
+            $res = $stmt->get_result();
+            if($row = $res->fetch_assoc()){
+                $__IS_EMP_ADMIN = ((int)$row['manhanvien'] === 1);
+            }
+            $stmt->close();
+        }
+    }
+} catch (Throwable $e) { $__IS_EMP_ADMIN = false; }
 ?>
 <!DOCTYPE html>
 <html dir="ltr" lang="en">
@@ -21,10 +38,11 @@ if(!isset($_SESSION["login"])){
     <meta name="robots" content="noindex,nofollow">
     <title>Trang Quản Trị - Admin</title>
     <link rel="canonical" href="https://www.wrappixel.com/templates/xtreme-admin-lite/" />
-    <link rel="icon" type="image/png" sizes="16x16" href="assets/images/favicon.png">
-    <link href="assets/libs/chartist/dist/chartist.min.css" rel="stylesheet">
-    <link href="dist/css/style.min.css" rel="stylesheet">
+    <link rel="icon" type="image/png" sizes="16x16" href="/webbansach/admin/assets/images/favicon.png">
+    <link href="/webbansach/admin/assets/libs/chartist/dist/chartist.min.css" rel="stylesheet">
+    <link href="/webbansach/admin/dist/css/style.min.css" rel="stylesheet">
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <link rel="stylesheet" type="text/css" href="/webbansach/css/toast.css">
 </head>
 
 <body>
@@ -41,15 +59,15 @@ if(!isset($_SESSION["login"])){
                 <div class="navbar-header" data-logobg="skin5">
                     <a class="navbar-brand" href="index.php">
                         <b class="logo-icon">
-                            <img src="assets/images/logo-icon.png" alt="homepage" class="dark-logo" />
+                            <img src="/webbansach/admin/assets/images/logo-icon.png" alt="homepage" class="dark-logo" />
                             <!-- Light Logo icon -->
-                            <img src="assets/images/logo-light-icon.png" alt="homepage" class="light-logo" />
+                            <img src="/webbansach/admin/assets/images/logo-light-icon.png" alt="homepage" class="light-logo" />
                         </b>
                         <span class="logo-text">
                             <!-- dark Logo text -->
-                            <img src="assets/images/logo-text.png" alt="homepage" class="dark-logo" />
+                            <img src="/webbansach/admin/assets/images/logo-text.png" alt="homepage" class="dark-logo" />
                             <!-- Light Logo text -->
-                            <img src="assets/images/logo-light-text.png" class="light-logo" alt="homepage" />
+                            <img src="/webbansach/admin/assets/images/logo-light-text.png" class="light-logo" alt="homepage" />
                         </span>
                     </a>
                     <a class="nav-toggler waves-effect waves-light d-block d-md-none" href="javascript:void(0)"><i
@@ -79,7 +97,7 @@ if(!isset($_SESSION["login"])){
                         <li>
                             <!-- User Profile-->
                             <div class="user-profile d-flex no-block dropdown m-t-20">
-                                <div class="user-pic"><img src="assets/images/users/1.jpg" alt="users"
+                                <div class="user-pic"><img src="/webbansach/admin/assets/images/users/1.jpg" alt="users"
                                         class="rounded-circle" width="40" /></div>
                                 <div class="user-content hide-menu m-l-10">
                                     <a href="#" class="" id="Userdd" role="button"
@@ -116,6 +134,17 @@ if(!isset($_SESSION["login"])){
                         <li class="sidebar-item"> <a class="sidebar-link waves-effect waves-dark sidebar-link"
                                 href="khach-hang.php" aria-expanded="false"><i class="mdi mdi-face"></i><span
                                     class="hide-menu">Khách Hàng</span></a></li>
+                        <?php if($__IS_EMP_ADMIN){ ?>
+                        <li class="sidebar-item"> <a class="sidebar-link waves-effect waves-dark sidebar-link"
+                                href="nhan-vien.php" aria-expanded="false"><i class="mdi mdi-account"></i><span
+                                    class="hide-menu">Nhân Viên</span></a></li>
+                        <?php } ?>
+                        <li class="sidebar-item"> <a class="sidebar-link waves-effect waves-dark sidebar-link"
+                                href="lien-he.php" aria-expanded="false"><i class="mdi mdi-email-outline"></i><span
+                                    class="hide-menu">Phản Hồi</span></a></li>
+                        <li class="sidebar-item"> <a class="sidebar-link waves-effect waves-dark sidebar-link"
+                                href="banner.php" aria-expanded="false"><i class="mdi mdi-image-multiple"></i><span
+                                    class="hide-menu">Banner</span></a></li>
                     </ul>
 
                 </nav>
@@ -123,3 +152,85 @@ if(!isset($_SESSION["login"])){
             </div>
             <!-- End Sidebar scroll-->
         </aside>
+
+        <div id="toast-container"></div>
+        <script>
+        // Override default alert
+        window.originalAlert = window.alert;
+        window.alert = function(message) {
+            // Use our toast notification instead
+            const toast = document.createElement('div');
+            toast.className = 'toast info show';
+            toast.innerHTML = `
+                <span class="toast-icon"><i class="fas fa-info-circle"></i></span>
+                <div class="toast-content">
+                    <div class="toast-message">${message}</div>
+                </div>
+                <button class="toast-close">&times;</button>
+                <div class="toast-progress"></div>
+            `;
+            
+            const container = document.getElementById('toast-container') || document.body;
+            container.appendChild(toast);
+            
+            // Start progress bar animation
+            const progressBar = toast.querySelector('.toast-progress');
+            if (progressBar) {
+                progressBar.style.animation = 'progress 5000ms linear forwards';
+            }
+            
+            // Auto hide after 5 seconds
+            const hideTimer = setTimeout(() => {
+                hideToast(toast);
+            }, 5000);
+            
+            // Close button event
+            const closeBtn = toast.querySelector('.toast-close');
+            if (closeBtn) {
+                closeBtn.addEventListener('click', () => {
+                    clearTimeout(hideTimer);
+                    hideToast(toast);
+                });
+            }
+            
+            // Pause on hover
+            toast.addEventListener('mouseenter', () => {
+                clearTimeout(hideTimer);
+                if (progressBar) {
+                    const progress = getComputedStyle(progressBar).transform;
+                    progressBar.style.transform = progress;
+                    progressBar.style.animationPlayState = 'paused';
+                }
+            });
+            
+            toast.addEventListener('mouseleave', () => {
+                const remaining = getRemainingTime(toast, 5000);
+                if (progressBar) {
+                    progressBar.style.animation = `progress ${remaining}ms linear forwards`;
+                }
+                setTimeout(() => {
+                    hideToast(toast);
+                }, remaining);
+            });
+            
+            // Remove toast after animation
+            toast.addEventListener('animationend', (e) => {
+                if (e.animationName === 'slideOutRight') {
+                    toast.remove();
+                }
+            });
+        };
+
+        // Helper to get remaining time for progress bar
+        function getRemainingTime(toast, totalDuration) {
+            const startTime = parseInt(toast.getAttribute('data-start-time') || Date.now());
+            const elapsed = Date.now() - startTime;
+            return Math.max(0, totalDuration - elapsed);
+        }
+
+        // Hide toast with animation
+        function hideToast(toast) {
+            toast.classList.remove('show');
+            toast.classList.add('hide');
+        }
+        </script>

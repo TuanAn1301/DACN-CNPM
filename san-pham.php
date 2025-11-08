@@ -91,7 +91,7 @@ $sanphamlienquan = queryResult($conn, $sql_sanphamlienquan);
                             <h3 class="product-title"><?php echo $sanpham['tensanpham']; ?></h3>
                             <ul class="list-unstyled">
                                 <li>Giảm: <span class="list-value"> - <?php echo number_format($sanpham['giagoc'] - $sanpham['giaban']); ?></span></li>
-                                <li>Chuyên mục: <a href="#" class="list-value font-weight-bold"> <?php echo $cm['tenchuyenmuc']; ?></a></li>
+                                <li>Chuyên mục: <a href="tim-kiem.php?cm=<?php echo (int)$sanpham['machuyenmuc']; ?>" class="list-value font-weight-bold"> <?php echo $cm['tenchuyenmuc']; ?></a></li>
                                 <li>Mã sản phẩm: <span class="list-value"> #sach<?php echo $sanpham['masanpham']; ?></span></li>
                                 <li>Trạng thái: <span class="list-value"> Còn hàng</span></li>
                             </ul>
@@ -216,23 +216,37 @@ $sanphamlienquan = queryResult($conn, $sql_sanphamlienquan);
 
                 localStorage.setItem("giohang", JSON.stringify(item))
 
-                alert("Đã thêm sách vào giỏ hàng")
+                if (typeof window.queueToast === 'function') {
+                    window.queueToast('success', 'Đã thêm sách vào giỏ hàng!', 'Thành công', 3000);
+                }
                 location.reload();
 
             }else{
                 var giohang = JSON.parse(localStorage.getItem("giohang"))
 
-                var check = 0;
                 var masanpham = '<?php echo $sanpham['masanpham'];?>'
+                var foundIndex = -1;
                 for (var i = 0; i < giohang.length; i++) {
                     if (giohang[i].masanpham == masanpham){
-                        check = check + 1
+                        foundIndex = i;
+                        break;
                     }
                 }
 
-                if(check != 0){
-                    alert("Sách đã có trong giỏ hàng!")
+                if(foundIndex >= 0){
+                    // Sách đã có trong giỏ hàng, cộng thêm số lượng
+                    var soLuongHienTai = parseInt(giohang[foundIndex].soluong);
+                    var soLuongThem = parseInt(soluong);
+                    giohang[foundIndex].soluong = soLuongHienTai + soLuongThem;
+                    
+                    localStorage.setItem("giohang", JSON.stringify(giohang));
+
+                    if (typeof window.queueToast === 'function') {
+                        window.queueToast('success', 'Đã cộng thêm ' + soLuongThem + ' sản phẩm vào giỏ hàng! (Tổng: ' + giohang[foundIndex].soluong + ')', 'Cập nhật giỏ hàng', 3000);
+                    }
+                    location.reload();
                 }else{
+                    // Sách chưa có, thêm mới
                     var book = {
                         masanpham: '<?php echo $sanpham['masanpham'];?>',
                         tensanpham: '<?php echo $sanpham['tensanpham'];?>',
@@ -243,10 +257,11 @@ $sanphamlienquan = queryResult($conn, $sql_sanphamlienquan);
 
                     giohang.push(book)
            
-
                     localStorage.setItem("giohang", JSON.stringify(giohang))
 
-                    alert('Thêm sách vào giỏ hàng thành công!')
+                    if (typeof window.queueToast === 'function') {
+                        window.queueToast('success', 'Thêm sách vào giỏ hàng thành công!', 'Thành công', 3000);
+                    }
                     location.reload();
 
                 }

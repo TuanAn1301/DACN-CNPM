@@ -1,0 +1,68 @@
+[2025-11-08 07:58:46] 🔄 Bước 1: Đang khởi tạo trình duyệt Chrome...
+[2025-11-08 07:58:51] 🌐 Bước 2: Đang mở trang liên hệ...
+[2025-11-08 07:59:01] 📝 Bước 3: Đang điền thông tin liên hệ...
+[2025-11-08 07:59:02] 📸 Đã lưu ảnh form đã điền: screenshots\form_filled_1762563542.png
+[2025-11-08 07:59:02] 🚀 Bước 4: Đang tìm và nhấn nút gửi tin nhắn...
+[2025-11-08 07:59:04] 📸 Đã lưu ảnh trước khi gửi: screenshots\before_submit_1762563543.png
+[2025-11-08 07:59:05] ❌ Lỗi khi nhấn nút gửi: Message: element click intercepted: Element <button type="submit" class="btn btn-outlined--primary btn-contact">...</button> is not clickable at point (544, 25). Other element would receive the click: <div class="col-lg-4">...</div>
+  (Session info: chrome=131.0.6778.205); For documentation on this error, please visit: https://www.selenium.dev/documentation/webdriver/troubleshooting/errors#elementclickinterceptedexception
+Stacktrace:
+	GetHandleVerifier [0x00D6FD53+23747]
+	(No symbol) [0x00CF7D54]
+	(No symbol) [0x00BCBE53]
+	(No symbol) [0x00C15C57]
+	(No symbol) [0x00C140C3]
+	(No symbol) [0x00C11CCD]
+	(No symbol) [0x00C11034]
+	(No symbol) [0x00C05F57]
+	(No symbol) [0x00C31DFC]
+	(No symbol) [0x00C059A4]
+	(No symbol) [0x00C32094]
+	(No symbol) [0x00C4B41E]
+	(No symbol) [0x00C31B96]
+	(No symbol) [0x00C03F3C]
+	(No symbol) [0x00C04EBD]
+	GetHandleVerifier [0x0104AC73+3017699]
+	GetHandleVerifier [0x0105B93B+3086507]
+	GetHandleVerifier [0x010540F2+3055714]
+	GetHandleVerifier [0x00E05AF0+637536]
+	(No symbol) [0x00D00A5D]
+	(No symbol) [0x00CFDA28]
+	(No symbol) [0x00CFDBC5]
+	(No symbol) [0x00CF07F0]
+	BaseThreadInitThunk [0x75AE5D49+25]
+	RtlInitializeExceptionChain [0x7787D6DB+107]
+	RtlGetAppContainerNamedObjectPath [0x7787D661+561]
+
+[2025-11-08 07:59:05] 📸 Đã lưu ảnh lỗi: screenshots\error_submit_1762563545.png
+[2025-11-08 07:59:05] ❌ Có lỗi xảy ra: Message: element click intercepted: Element <button type="submit" class="btn btn-outlined--primary btn-contact">...</button> is not clickable at point (544, 25). Other element would receive the click: <div class="col-lg-4">...</div>
+  (Session info: chrome=131.0.6778.205); For documentation on this error, please visit: https://www.selenium.dev/documentation/webdriver/troubleshooting/errors#elementclickinterceptedexception
+Stacktrace:
+	GetHandleVerifier [0x00D6FD53+23747]
+	(No symbol) [0x00CF7D54]
+	(No symbol) [0x00BCBE53]
+	(No symbol) [0x00C15C57]
+	(No symbol) [0x00C140C3]
+	(No symbol) [0x00C11CCD]
+	(No symbol) [0x00C11034]
+	(No symbol) [0x00C05F57]
+	(No symbol) [0x00C31DFC]
+	(No symbol) [0x00C059A4]
+	(No symbol) [0x00C32094]
+	(No symbol) [0x00C4B41E]
+	(No symbol) [0x00C31B96]
+	(No symbol) [0x00C03F3C]
+	(No symbol) [0x00C04EBD]
+	GetHandleVerifier [0x0104AC73+3017699]
+	GetHandleVerifier [0x0105B93B+3086507]
+	GetHandleVerifier [0x010540F2+3055714]
+	GetHandleVerifier [0x00E05AF0+637536]
+	(No symbol) [0x00D00A5D]
+	(No symbol) [0x00CFDA28]
+	(No symbol) [0x00CFDBC5]
+	(No symbol) [0x00CF07F0]
+	BaseThreadInitThunk [0x75AE5D49+25]
+	RtlInitializeExceptionChain [0x7787D6DB+107]
+	RtlGetAppContainerNamedObjectPath [0x7787D661+561]
+
+[2025-11-08 07:59:07] 👋 Đã đóng trình duyệt

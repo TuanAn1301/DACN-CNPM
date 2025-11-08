@@ -1,9 +1,38 @@
 <?php require(__DIR__.'/layouts/header.php'); ?>  
 <?php 
 
-$tensach = "'%".$_GET['tensach']."%'";
+$keyword = isset($_GET['tensach']) ? trim($_GET['tensach']) : '';
+$cm = isset($_GET['cm']) ? (int)$_GET['cm'] : 0;
 
-$sql_sanpham = "SELECT * FROM sanpham WHERE tensanpham LIKE ".$tensach."";
+$where = [];
+if ($keyword !== '') {
+    $safe = mysqli_real_escape_string($conn, $keyword);
+    $where[] = "tensanpham LIKE '%$safe%'";
+}
+if ($cm > 0) {
+    $where[] = "machuyenmuc = $cm";
+}
+$whereSql = count($where) ? ('WHERE ' . implode(' AND ', $where)) : '';
+$sort = isset($_GET['sort']) ? $_GET['sort'] : '';
+$orderSql = '';
+switch ($sort) {
+    case 'name_asc':
+        $orderSql = ' ORDER BY tensanpham ASC';
+        break;
+    case 'name_desc':
+        $orderSql = ' ORDER BY tensanpham DESC';
+        break;
+    case 'price_asc':
+        $orderSql = ' ORDER BY giaban ASC';
+        break;
+    case 'price_desc':
+        $orderSql = ' ORDER BY giaban DESC';
+        break;
+    default:
+        $orderSql = ' ORDER BY masanpham DESC';
+}
+
+$sql_sanpham = "SELECT * FROM sanpham $whereSql$orderSql";
 $sanpham = queryResult($conn,$sql_sanpham);
 
  ?>  
@@ -46,18 +75,21 @@ $sanpham = queryResult($conn,$sql_sanpham);
 						<div class="col-xl-4 col-lg-4 col-md-4 col-sm-6 mt--10 mt-md--0 ">
 							<div class="sorting-selection">
 								<span>Sắp xếp theo:</span>
-								<select class="form-control nice-select sort-select mr-0">
-									<option value="" selected="selected">Mặc Định</option>
-									<option value="">
-										Theo tên: (A - Z)</option>
-									<option value="">
-										Theo tên: (Z - A)</option>
-									<option value="">
-										Theo giá: (Thấp &gt; Cao)</option>
-									<option value="">
-										Theo giá: (Thấp &gt; Cao)</option>
-									
-								</select>
+								<form method="GET" action="tim-kiem.php">
+									<?php if ($keyword !== '') { ?>
+										<input type="hidden" name="tensach" value="<?php echo htmlspecialchars($keyword, ENT_QUOTES, 'UTF-8'); ?>">
+									<?php } ?>
+									<?php if ($cm > 0) { ?>
+										<input type="hidden" name="cm" value="<?php echo (int)$cm; ?>">
+									<?php } ?>
+									<select name="sort" class="form-control nice-select sort-select mr-0" onchange="this.form.submit()">
+										<option value="" <?php echo ($sort==''?'selected':''); ?>>Mặc Định</option>
+										<option value="name_asc" <?php echo ($sort=='name_asc'?'selected':''); ?>>Theo tên: (A - Z)</option>
+										<option value="name_desc" <?php echo ($sort=='name_desc'?'selected':''); ?>>Theo tên: (Z - A)</option>
+										<option value="price_asc" <?php echo ($sort=='price_asc'?'selected':''); ?>>Theo giá: (Thấp &gt; Cao)</option>
+										<option value="price_desc" <?php echo ($sort=='price_desc'?'selected':''); ?>>Theo giá: (Cao &gt; Thấp)</option>
+									</select>
+								</form>
 							</div>
 						</div>
 					</div>
@@ -89,18 +121,21 @@ $sanpham = queryResult($conn,$sql_sanpham);
 						<div class="col-xl-3 col-lg-4 col-md-4 col-sm-6 mt--10 mt-md--0 ">
 							<div class="sorting-selection">
 								<span>Sắp xếp theo:</span>
-								<select class="form-control nice-select sort-select mr-0">
-									<option value="" selected="selected">Mặc Định</option>
-									<option value="">
-										Theo tên: (A - Z)</option>
-									<option value="">
-										Theo tên: (Z - A)</option>
-									<option value="">
-										Theo giá: (Thấp &gt; Cao)</option>
-									<option value="">
-										Theo giá: (Thấp &gt; Cao)</option>
-									
-								</select>
+								<form method="GET" action="tim-kiem.php">
+									<?php if ($keyword !== '') { ?>
+										<input type="hidden" name="tensach" value="<?php echo htmlspecialchars($keyword, ENT_QUOTES, 'UTF-8'); ?>">
+									<?php } ?>
+									<?php if ($cm > 0) { ?>
+										<input type="hidden" name="cm" value="<?php echo (int)$cm; ?>">
+									<?php } ?>
+									<select name="sort" class="form-control nice-select sort-select mr-0" onchange="this.form.submit()">
+										<option value="" <?php echo ($sort==''?'selected':''); ?>>Mặc Định</option>
+										<option value="name_asc" <?php echo ($sort=='name_asc'?'selected':''); ?>>Theo tên: (A - Z)</option>
+										<option value="name_desc" <?php echo ($sort=='name_desc'?'selected':''); ?>>Theo tên: (Z - A)</option>
+										<option value="price_asc" <?php echo ($sort=='price_asc'?'selected':''); ?>>Theo giá: (Thấp &gt; Cao)</option>
+										<option value="price_desc" <?php echo ($sort=='price_desc'?'selected':''); ?>>Theo giá: (Cao &gt; Thấp)</option>
+									</select>
+								</form>
 							</div>
 						</div>
 					</div>

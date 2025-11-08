@@ -1,0 +1,8 @@
+Thời gian lỗi: 2025-11-07 22:49:38
+Lỗi: in_thong_bao() missing 1 required positional argument: 'noi_dung'
+
+=== TRACE BACK ===
+Traceback (most recent call last):
+  File "c:\xampp\htdocs\webbansach\test case\đăng nhập\kiem_tra_dang_nhap_that_bai.py", line 468, in main
+    in_thong_bao(f"   - Đã lưu ảnh lỗi: {error_screenshot}")
+TypeError: in_thong_bao() missing 1 required positional argument: 'noi_dung'

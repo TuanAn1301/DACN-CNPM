@@ -28,26 +28,61 @@ if($_SERVER['REQUEST_METHOD'] == 'POST'){
 	$anhphu3 = $sanpham['anhphu3'];
 	$anhphu4 = $sanpham['anhphu4'];
 
-	if(move_uploaded_file($_FILES['anhchinh']['tmp_name'], 'upload/a'. $_FILES['anhchinh']['name'])){
-        $anhchinh = 'admin/upload/a'. $_FILES['anhchinh']['name'];
-    }
+	// Ensure upload dir exists
+	$uploadDir = __DIR__ . '/upload';
+	if (!is_dir($uploadDir)) { @mkdir($uploadDir, 0777, true); }
 
-    if(move_uploaded_file($_FILES['anhphu1']['tmp_name'], 'upload/b' . $_FILES['anhphu1']['name'])){
-        $anhphu1 = 'admin/upload/b'. $_FILES['anhphu1']['name'];
-    }
+	function make_unique_name($prefix, $originalName) {
+		$ext = pathinfo($originalName, PATHINFO_EXTENSION);
+		$base = pathinfo($originalName, PATHINFO_FILENAME);
+		$base = preg_replace('/[^a-zA-Z0-9_-]+/', '-', $base);
+		return $prefix . $base . '-' . uniqid() . ($ext ? ('.' . $ext) : '');
+	}
 
-    if(move_uploaded_file($_FILES['anhphu2']['tmp_name'], 'upload/c' . $_FILES['anhphu2']['name'])){
-        $anhphu2 = 'admin/upload/c'. $_FILES['anhphu2']['name'];
-    }
-	
-    if(move_uploaded_file($_FILES['anhphu3']['tmp_name'], 'upload/d' . $_FILES['anhphu3']['name'])){
-        $anhphu3 = 'admin/upload/d'. $_FILES['anhphu2']['name'];
-    }
+	function safe_delete_upload($relativePath) {
+		if (!$relativePath) return;
+		if (strpos($relativePath, 'admin/upload/') !== 0) return;
+		$abs = realpath(__DIR__ . '/../' . $relativePath);
+		$uploadRoot = realpath(__DIR__ . '/upload');
+		if ($abs && $uploadRoot && strpos($abs, $uploadRoot) === 0 && file_exists($abs)) { @unlink($abs); }
+	}
 
-    if(move_uploaded_file($_FILES['anhphu4']['tmp_name'], 'upload/e' . $_FILES['anhphu4']['name'])){
-        $anhphu4 = 'admin/upload/e'. $_FILES['anhphu4']['name'];
-    }
-	
+	// Replace if new files provided
+	if (!empty($_FILES['anhchinh']['name'])) {
+		$new = make_unique_name('a-', $_FILES['anhchinh']['name']);
+		if (move_uploaded_file($_FILES['anhchinh']['tmp_name'], $uploadDir . '/' . $new)) {
+			safe_delete_upload($anhchinh);
+			$anhchinh = 'admin/upload/' . $new;
+		}
+	}
+	if (!empty($_FILES['anhphu1']['name'])) {
+		$new = make_unique_name('b-', $_FILES['anhphu1']['name']);
+		if (move_uploaded_file($_FILES['anhphu1']['tmp_name'], $uploadDir . '/' . $new)) {
+			safe_delete_upload($anhphu1);
+			$anhphu1 = 'admin/upload/' . $new;
+		}
+	}
+	if (!empty($_FILES['anhphu2']['name'])) {
+		$new = make_unique_name('c-', $_FILES['anhphu2']['name']);
+		if (move_uploaded_file($_FILES['anhphu2']['tmp_name'], $uploadDir . '/' . $new)) {
+			safe_delete_upload($anhphu2);
+			$anhphu2 = 'admin/upload/' . $new;
+		}
+	}
+	if (!empty($_FILES['anhphu3']['name'])) {
+		$new = make_unique_name('d-', $_FILES['anhphu3']['name']);
+		if (move_uploaded_file($_FILES['anhphu3']['tmp_name'], $uploadDir . '/' . $new)) {
+			safe_delete_upload($anhphu3);
+			$anhphu3 = 'admin/upload/' . $new;
+		}
+	}
+	if (!empty($_FILES['anhphu4']['name'])) {
+		$new = make_unique_name('e-', $_FILES['anhphu4']['name']);
+		if (move_uploaded_file($_FILES['anhphu4']['tmp_name'], $uploadDir . '/' . $new)) {
+			safe_delete_upload($anhphu4);
+			$anhphu4 = 'admin/upload/' . $new;
+		}
+	}
 
 	$sql_update = "UPDATE `sanpham` SET `tensanpham`='".$tensanpham."',`giagoc`='".$giagoc."',`giaban`='".$giaban."',`machuyenmuc`=".$machuyenmuc.",`tag`='".$tag."',`mota`='".$motangan."',`anhchinh`='".$anhchinh."',`anhphu1`='".$anhphu1."',`anhphu2`='".$anhphu2."',`anhphu3`='".$anhphu3."',`anhphu4`='".$anhphu4."',`motachitiet`='".$motachitiet."' WHERE `masanpham`= ".$masanpham;
 	queryExecute($conn,$sql_update);
@@ -171,7 +206,7 @@ if($_SERVER['REQUEST_METHOD'] == 'POST'){
                                     </div>
                                     <div class="form-group">
                                         <div class="col-sm-12">
-                                            <button class="btn btn-success text-white" type="submit">Thêm Sản Phẩm</button>
+                                            <button class="btn btn-success text-white" type="submit">Sửa Sản Phẩm</button>
                                         </div>
                                     </div>
                                 </form>

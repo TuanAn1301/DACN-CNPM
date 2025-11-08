@@ -2,8 +2,26 @@
 
 <?php 
 require('../database/connect.php');	
-require('../database/query.php');	
-$sql = "SELECT donhang.madonhang, donhang.makhachhang, donhang.trangthai AS trangthaihang, donhang.tongtien, donhang.diachi AS diachihang, donhang.thoigian, khachhang.* FROM donhang, khachhang WHERE donhang.makhachhang = khachhang.makhachhang ORDER BY donhang.madonhang DESC";
+require('../database/query.php');
+
+// Get filter parameters
+$filter_status = isset($_GET['status']) ? $_GET['status'] : '';
+$filter_date = isset($_GET['date']) ? $_GET['date'] : '';
+
+// Build SQL query with filters
+$sql = "SELECT donhang.madonhang, donhang.makhachhang, donhang.trangthai AS trangthaihang, donhang.tongtien, donhang.diachi AS diachihang, donhang.thoigian, khachhang.* FROM donhang, khachhang WHERE donhang.makhachhang = khachhang.makhachhang";
+
+// Add status filter
+if ($filter_status !== '' && $filter_status !== 'all') {
+    $sql .= " AND donhang.trangthai = " . intval($filter_status);
+}
+
+// Add date filter
+if ($filter_date !== '') {
+    $sql .= " AND DATE(donhang.thoigian) = '" . $conn->real_escape_string($filter_date) . "'";
+}
+
+$sql .= " ORDER BY donhang.madonhang DESC";
 $result = queryResult($conn,$sql);
 
 ?>
@@ -33,6 +51,36 @@ $result = queryResult($conn,$sql);
                                 	Đơn Hàng
                             	</h4>
                                 <h6 class="card-subtitle">Thông tin đơn hàng trong hệ thống</h6>
+                                
+                                <!-- Filter Section -->
+                                <div class="card border m-t-20 m-b-20">
+                                    <div class="card-body">
+                                        <h6 class="card-title"><i class="mdi mdi-filter-variant"></i> Lọc đơn hàng</h6>
+                                        <form method="GET" action="" id="filterForm">
+                                            <div class="row">
+                                                <div class="col-md-6 col-12">
+                                                    <div class="form-group">
+                                                        <label>Trạng thái:</label>
+                                                        <select name="status" class="form-control" onchange="document.getElementById('filterForm').submit();">
+                                                            <option value="all" <?php echo ($filter_status === 'all' || $filter_status === '') ? 'selected' : ''; ?>>Tất cả</option>
+                                                            <option value="0" <?php echo $filter_status === '0' ? 'selected' : ''; ?>>Chưa duyệt đơn</option>
+                                                            <option value="1" <?php echo $filter_status === '1' ? 'selected' : ''; ?>>Đang giao hàng</option>
+                                                            <option value="2" <?php echo $filter_status === '2' ? 'selected' : ''; ?>>Đã hủy đơn</option>
+                                                            <option value="3" <?php echo $filter_status === '3' ? 'selected' : ''; ?>>Khách đã nhận</option>
+                                                        </select>
+                                                    </div>
+                                                </div>
+                                                <div class="col-md-6 col-12">
+                                                    <div class="form-group">
+                                                        <label>Chọn ngày:</label>
+                                                        <input type="date" name="date" class="form-control" value="<?php echo htmlspecialchars($filter_date); ?>" onchange="document.getElementById('filterForm').submit();">
+                                                    </div>
+                                                </div>
+                                            </div>
+                                        </form>
+                                    </div>
+                                </div>
+                                
                                 <h6 class="card-title m-t-40"><i class="m-r-5 font-18 mdi mdi-numeric-1-box-multiple-outline"></i> Danh sách đơn hàng</h6>
                                 <div class="table-responsive">
                                     <table class="table">
