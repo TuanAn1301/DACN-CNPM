@@ -12,15 +12,28 @@ from selenium.webdriver.chrome.service import Service
 from selenium.webdriver.chrome.options import Options
 from webdriver_manager.chrome import ChromeDriverManager
 from openpyxl import load_workbook
-from openpyxl.styles import Font, PatternFill
+from openpyxl.styles import Font, PatternFill, Alignment
+from openpyxl.drawing.image import Image as xlImage
+from PIL import Image as PILImage
+import io
 
 def random_string(length):
     """Tạo chuỗi ngẫu nhiên"""
     letters = string.ascii_lowercase
     return ''.join(random.choice(letters) for _ in range(length))
 
-def save_test_report(test_results, log_file, test_data=None, success_message=None):
-    """Lưu báo cáo kiểm thử và xuất ra Excel"""
+def save_test_report(test_results, log_file, test_data=None, success_message=None, screenshot_paths=None):
+    """Lưu báo cáo kiểm thử và xuất ra Excel
+    
+    Args:
+        test_results: Kết quả kiểm thử
+        log_file: Đường dẫn file log
+        test_data: Dữ liệu test
+        success_message: Thông báo thành công
+        screenshot_paths: Danh sách đường dẫn ảnh chụp màn hình
+    """
+    if screenshot_paths is None:
+        screenshot_paths = []
     # Tạo báo cáo văn bản
     report = f"""
 ==================================================
@@ -65,57 +78,155 @@ Trạng thái: {'✅ THÀNH CÔNG' if test_results['status'] == 'PASSED' else '�
     # Tạo báo cáo Excel
     excel_file = log_file.replace('.txt', '_report.xlsx')
     
-    # Tạo DataFrame từ dữ liệu test
-    if test_data:
-        df_data = {
-            'Mục': ['Thời gian kiểm thử', 'Trạng thái', 'Họ tên', 'Email', 'Số điện thoại', 'Nội dung', 'Thông báo'],
-            'Giá trị': [
-                test_results['start_time'],
-                'Thành công' if test_results['status'] == 'PASSED' else 'Thất bại',
-                test_data.get('name', ''),
-                test_data.get('email', ''),
-                test_data.get('phone', ''),
-                test_data.get('message', ''),
-                success_message or ''
-            ]
+    # Tạo dữ liệu cho báo cáo Excel
+    test_cases = [
+        {
+            'STT': 1,
+            'Tên Test Case': 'Gửi thông tin liên hệ với dữ liệu hợp lệ',
+            'Mục đích': 'Kiểm tra chức năng gửi thông tin liên hệ với dữ liệu hợp lệ',
+            'Dữ liệu đầu vào': 'Họ tên: ' + test_data.get('name', '') + '\n' +
+                             'Email: ' + test_data.get('email', '') + '\n' +
+                             'Số điện thoại: ' + test_data.get('phone', '') + '\n' +
+                             'Nội dung: ' + test_data.get('message', ''),
+            'Kết quả mong đợi': 'Gửi thông tin thành công và hiển thị thông báo xác nhận',
+            'Kết quả thực tế': success_message or 'Đã gửi thông tin liên hệ',
+            'Trạng thái': 'Passed' if test_results['status'] == 'PASSED' else 'Failed',
+            'Ghi chú': 'Kiểm thử tự động bằng Selenium',
+            'Thời gian chạy': test_results['start_time'],
+            'Ảnh chụp': 'Xem ảnh bên dưới' if screenshot_paths else 'Không có ảnh'
+        }
+    ]
+    
+    # Tạo DataFrame từ dữ liệu test cases
+    df = pd.DataFrame(test_cases)
+    
+    # Sắp xếp lại cột
+    df = df[['STT', 'Tên Test Case', 'Mục đích', 'Dữ liệu đầu vào', 
+             'Kết quả mong đợi', 'Kết quả thực tế', 'Trạng thái', 
+             'Ghi chú', 'Thời gian chạy']]
+    
+    # Lưu vào Excel
+    with pd.ExcelWriter(excel_file, engine='openpyxl') as writer:
+        df.to_excel(writer, index=False, sheet_name='Kết quả kiểm thử')
+        
+        # Lấy workbook và worksheet
+        workbook = writer.book
+        worksheet = writer.sheets['Kết quả kiểm thử']
+        
+        # Định dạng header
+        header_fill = PatternFill(start_color='4472C4', end_color='4472C4', fill_type='solid')
+        header_font = Font(color='FFFFFF', bold=True)
+        
+        # Áp dụng định dạng cho hàng đầu tiên (header)
+        for cell in worksheet[1]:
+            cell.fill = header_fill
+            cell.font = header_font
+        
+        # Điều chỉnh độ rộng cột
+        column_widths = {
+            'A': 5,    # STT
+            'B': 35,   # Tên Test Case
+            'C': 25,   # Mục đích
+            'D': 40,   # Dữ liệu đầu vào
+            'E': 30,   # Kết quả mong đợi
+            'F': 30,   # Kết quả thực tế
+            'G': 15,   # Trạng thái
+            'H': 20,   # Ghi chú
+            'I': 20,   # Thời gian chạy
+            'J': 15    # Ảnh chụp
         }
         
-        df = pd.DataFrame(df_data)
+        for col, width in column_widths.items():
+            worksheet.column_dimensions[col].width = width
         
-        # Lưu vào Excel
-        with pd.ExcelWriter(excel_file, engine='openpyxl') as writer:
-            df.to_excel(writer, index=False, sheet_name='Kết quả kiểm thử')
+        # Tự động điều chỉnh chiều cao hàng
+        for row in worksheet.iter_rows():
+            max_length = 0
+            for cell in row:
+                try:
+                    if cell.value:
+                        max_length = max(max_length, len(str(cell.value)))
+                except:
+                    pass
+            adjusted_height = min(100, (max_length // 30 + 1) * 15)
+            worksheet.row_dimensions[row[0].row].height = adjusted_height
+        
+        # Định dạng wrap text cho các ô dài
+        for row in worksheet.iter_rows():
+            for cell in row:
+                cell.alignment = cell.alignment.copy(wrap_text=True, vertical='top')
+        
+        # Thêm ảnh vào báo cáo
+        if screenshot_paths:
+            # Tạo sheet mới cho ảnh
+            img_sheet = workbook.create_sheet(title="Ảnh chụp màn hình")
+            img_sheet.column_dimensions['A'].width = 20
+            img_sheet.column_dimensions['B'].width = 40
             
-            # Định dạng file Excel
-            workbook = writer.book
-            worksheet = writer.sheets['Kết quả kiểm thử']
+            # Thêm tiêu đề
+            img_sheet['A1'] = 'STT'
+            img_sheet['B1'] = 'Mô tả ảnh'
+            img_sheet['C1'] = 'Hình ảnh'
             
-            # Định dạng header
-            header_fill = PatternFill(start_color='4472C4', end_color='4472C4', fill_type='solid')
-            header_font = Font(color='FFFFFF', bold=True)
-            
-            for cell in worksheet[1]:
+            # Định dạng tiêu đề
+            for cell in img_sheet[1]:
                 cell.fill = header_fill
                 cell.font = header_font
             
-            # Điều chỉnh độ rộng cột
-            worksheet.column_dimensions['A'].width = 20
-            worksheet.column_dimensions['B'].width = 40
-            
-            # Thêm filter
-            worksheet.auto_filter.ref = worksheet.dimensions
+            # Thêm ảnh vào sheet
+            for idx, img_path in enumerate(screenshot_paths, start=2):
+                if os.path.exists(img_path):
+                    try:
+                        # Thêm thông tin ảnh
+                        img_sheet[f'A{idx}'] = idx - 1
+                        img_sheet[f'B{idx}'] = f'Ảnh {idx-1} - {os.path.basename(img_path)}'
+                        
+                        # Mở và điều chỉnh kích thước ảnh
+                        img = PILImage.open(img_path)
+                        # Giảm kích thước ảnh nếu cần
+                        max_width = 800
+                        max_height = 600
+                        img.thumbnail((max_width, max_height), PILImage.Resampling.LANCZOS)
+                        
+                        # Lưu ảnh tạm
+                        temp_img = io.BytesIO()
+                        img.save(temp_img, format='PNG')
+                        temp_img.seek(0)
+                        
+                        # Thêm ảnh vào sheet
+                        img_obj = xlImage(temp_img)
+                        img_obj.anchor = f'C{idx}'
+                        img_sheet.add_image(img_obj)
+                        
+                        # Điều chỉnh chiều cao hàng cho phù hợp
+                        img_sheet.row_dimensions[idx].height = img.height * 0.8
+                        
+                    except Exception as e:
+                        print(f"Không thể thêm ảnh {img_path}: {str(e)}")
+        
+        # Thêm filter
+        for sheet in [worksheet, img_sheet if 'img_sheet' in locals() else None]:
+            if sheet:
+                sheet.auto_filter.ref = sheet.dimensions
     
     print(report)
     print(f"\n📊 Đã lưu báo cáo Excel: {os.path.abspath(excel_file)}")
     return report_file, excel_file
 
 def test_contact_form():
-    # Tạo thư mục screenshots nếu chưa tồn tại
-    if not os.path.exists('screenshots'):
-        os.makedirs('screenshots')
+    # Tạo thư mục kết quả test
+    current_dir = os.path.dirname(os.path.abspath(__file__))
+    ket_qua_test_dir = os.path.join(current_dir, "kết quả test")
+    if not os.path.exists(ket_qua_test_dir):
+        os.makedirs(ket_qua_test_dir)
     
-    # Tạo file log
-    log_file = os.path.join("screenshots", f"test_log_{int(time.time())}.txt")
+    # Tạo thư mục screenshots nếu chưa tồn tại
+    screenshots_dir = os.path.join(current_dir, "screenshots")
+    if not os.path.exists(screenshots_dir):
+        os.makedirs(screenshots_dir)
+    
+    # Tạo file log trong thư mục kết quả test
+    log_file = os.path.join(ket_qua_test_dir, f"test_log_{int(time.time())}.txt")
     
     def log_message(message):
         """Ghi log và in ra console"""
@@ -190,7 +301,7 @@ def test_contact_form():
             message_field.send_keys(test_data['message'])
             
             # Chụp màn hình sau khi điền form
-            screenshot_path = os.path.join("screenshots", f"form_filled_{int(time.time())}.png")
+            screenshot_path = os.path.join(screenshots_dir, f"form_filled_{int(time.time())}.png")
             driver.save_screenshot(screenshot_path)
             log_message(f"📸 Đã lưu ảnh form đã điền: {screenshot_path}")
             
@@ -236,7 +347,7 @@ def test_contact_form():
             driver.execute_script("arguments[0].style.border='3px solid red';", submit_button)
             
             # Chụp màn hình trước khi nhấn nút gửi
-            screenshot_path = os.path.join("screenshots", f"before_submit_{int(time.time())}.png")
+            screenshot_path = os.path.join(screenshots_dir, f"before_submit_{int(time.time())}.png")
             driver.save_screenshot(screenshot_path)
             log_message(f"📸 Đã lưu ảnh trước khi gửi: {screenshot_path}")
             
@@ -256,10 +367,24 @@ def test_contact_form():
                 success_message = success_alert.text.strip()
                 log_message(f"✅ Thông báo thành công: {success_message}")
                 
-                # Chụp màn hình thông báo thành công
-                success_screenshot = os.path.join("screenshots", f"success_{int(time.time())}.png")
+                # Tạo tên file ảnh với thời gian
+                timestamp = int(time.time())
+                
+                # Chụp ảnh thông báo thành công
+                success_screenshot = os.path.join(screenshots_dir, f"success_alert_{timestamp}.png")
                 success_alert.screenshot(success_screenshot)
                 log_message(f"📸 Đã lưu ảnh thông báo thành công: {success_screenshot}")
+                
+                # Chờ một chút để đảm bảo thông báo hiển thị đầy đủ
+                time.sleep(1)
+                
+                # Chụp toàn màn hình để có bối cảnh đầy đủ
+                full_page_screenshot = os.path.join(screenshots_dir, f"success_page_{timestamp}.png")
+                driver.save_screenshot(full_page_screenshot)
+                log_message(f"📸 Đã lưu ảnh toàn màn hình sau khi gửi: {full_page_screenshot}")
+                
+                # Lưu đường dẫn ảnh để thêm vào báo cáo
+                test_results['screenshot_paths'] = [success_screenshot, full_page_screenshot]
                 
             except Exception as e:
                 log_message(f"⚠ Không tìm thấy thông báo thành công: {str(e)}")
@@ -277,7 +402,7 @@ def test_contact_form():
                         log_message(f"✅ {success_message}")
                     else:
                         # Chụp màn hình để kiểm tra
-                        error_screenshot = os.path.join("screenshots", f"unknown_status_{int(time.time())}.png")
+                        error_screenshot = os.path.join(screenshots_dir, f"unknown_status_{int(time.time())}.png")
                         driver.save_screenshot(error_screenshot)
                         log_message(f"⚠ Không xác định trạng thái, đã lưu ảnh: {error_screenshot}")
                         raise Exception("Không xác định được trạng thái gửi tin nhắn")
@@ -290,7 +415,7 @@ def test_contact_form():
             error_msg = f"Lỗi khi nhấn nút gửi: {str(e)}"
             log_message(f"❌ {error_msg}")
             # Chụp màn hình lỗi
-            error_screenshot = os.path.join("screenshots", f"error_submit_{int(time.time())}.png")
+            error_screenshot = os.path.join(screenshots_dir, f"error_submit_{int(time.time())}.png")
             driver.save_screenshot(error_screenshot)
             log_message(f"📸 Đã lưu ảnh lỗi: {error_screenshot}")
             add_test_step(4, "Nhấn nút gửi tin nhắn", 
@@ -327,7 +452,7 @@ def test_contact_form():
                     pass
             
             # Chụp màn hình sau khi gửi
-            screenshot_path = os.path.join("screenshots", f"after_submit_{int(time.time())}.png")
+            screenshot_path = os.path.join(screenshots_dir, f"after_submit_{int(time.time())}.png")
             driver.save_screenshot(screenshot_path)
             log_message(f"📸 Đã lưu ảnh sau khi gửi: {screenshot_path}")
             
@@ -364,7 +489,7 @@ def test_contact_form():
             error_msg = f"Lỗi khi xác minh kết quả: {str(e)}"
             log_message(f"❌ {error_msg}")
             # Chụp màn hình lỗi
-            error_screenshot = os.path.join("screenshots", f"error_verification_{int(time.time())}.png")
+            error_screenshot = os.path.join(screenshots_dir, f"error_verification_{int(time.time())}.png")
             driver.save_screenshot(error_screenshot)
             log_message(f"📸 Đã lưu ảnh lỗi: {error_screenshot}")
             
@@ -380,7 +505,25 @@ def test_contact_form():
     finally:
         # Lưu báo cáo
         test_results['end_time'] = time.strftime("%Y-%m-%d %H:%M:%S")
-        report_file, excel_file = save_test_report(test_results, log_file, test_data, success_message)
+        screenshot_paths = test_results.get('screenshot_paths', [])
+        
+        # Đảm bảo Excel được lưu vào folder "kết quả test"
+        current_dir = os.path.dirname(os.path.abspath(__file__))
+        ket_qua_test_dir = os.path.join(current_dir, "kết quả test")
+        if not os.path.exists(ket_qua_test_dir):
+            os.makedirs(ket_qua_test_dir)
+        
+        # Tạo log_file trong folder "kết quả test" nếu chưa có
+        if not log_file or not log_file.startswith(ket_qua_test_dir):
+            log_file = os.path.join(ket_qua_test_dir, f"test_log_{int(time.time())}.txt")
+        
+        report_file, excel_file = save_test_report(
+            test_results, 
+            log_file, 
+            test_data, 
+            success_message,
+            screenshot_paths=screenshot_paths
+        )
         log_message(f"📄 Đã lưu báo cáo kiểm thử: {report_file}")
         log_message(f"📊 Đã lưu báo cáo Excel: {excel_file}")
         

@@ -1,0 +1,43 @@
+
+==================================================
+📝 BÁO CÁO KIỂM THỬ TỰ ĐỘNG - FORM LIÊN HỆ
+==================================================
+Thời gian bắt đầu: 2025-11-09 21:23:03
+Thời gian kết thúc: 2025-11-09 21:23:11
+Trạng thái: ✅ THÀNH CÔNG
+
+📋 THÔNG TIN GỬI TIN NHẮN:
+• Name: Nguyễn Văn A
+• Email: test_ptvxjlpx@example.com
+• Phone: 0983574469
+• Message: Đây là tin nhắn kiểm thử tự động. Xin vui lòng bỏ qua.
+
+📨 Thông báo phản hồi: Gửi thành công! Cảm ơn bạn đã liên hệ với chúng tôi. Chúng tôi sẽ phản hồi trong thời gian sớm nhất!
+×
+
+📋 CHI TIẾT CÁC BƯỚC KIỂM THỬ:
+
+--- Bước 2: Mở trang liên hệ ✅
+   • Mong đợi: Trang liên hệ được tải thành công
+   • Thực tế: Trang đã được tải thành công
+   • Trạng thái: Thành công
+
+--- Bước 3: Điền thông tin liên hệ ✅
+   • Mong đợi: Điền đầy đủ thông tin vào form
+   • Thực tế: Đã điền đầy đủ thông tin vào form
+   • Trạng thái: Thành công
+
+--- Bước 4: Nhấn nút gửi tin nhắn ✅
+   • Mong đợi: Nhấn nút gửi tin nhắn và xác nhận thành công
+   • Thực tế: Đã nhấn nút gửi tin nhắn. Gửi thành công! Cảm ơn bạn đã liên hệ với chúng tôi. Chúng tôi sẽ phản hồi trong thời gian sớm nhất!
+×
+   • Trạng thái: Thành công
+
+--- Bước 5: Xác minh kết quả ✅
+   • Mong đợi: Hiển thị thông báo gửi thành công
+   • Thực tế: URL chứa tham số status=success
+   • Trạng thái: Thành công
+
+==================================================
+📂 File log đầy đủ: c:\xampp\htdocs\webbansach\test case\liên hệ\kết quả test\test_log_1762698183.txt
+==================================================

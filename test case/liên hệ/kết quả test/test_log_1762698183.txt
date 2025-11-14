@@ -1,0 +1,17 @@
+[2025-11-09 21:23:03] 🔄 Bước 1: Đang khởi tạo trình duyệt Chrome...
+[2025-11-09 21:23:06] 🌐 Bước 2: Đang mở trang liên hệ...
+[2025-11-09 21:23:08] 📝 Bước 3: Đang điền thông tin liên hệ...
+[2025-11-09 21:23:08] 📸 Đã lưu ảnh form đã điền: c:\xampp\htdocs\webbansach\test case\liên hệ\screenshots\form_filled_1762698188.png
+[2025-11-09 21:23:08] 🚀 Bước 4: Đang tìm và nhấn nút gửi tin nhắn...
+[2025-11-09 21:23:09] 📸 Đã lưu ảnh trước khi gửi: c:\xampp\htdocs\webbansach\test case\liên hệ\screenshots\before_submit_1762698189.png
+[2025-11-09 21:23:10] ✅ Đã nhấn nút gửi tin nhắn
+[2025-11-09 21:23:10] ✅ Thông báo thành công: Gửi thành công! Cảm ơn bạn đã liên hệ với chúng tôi. Chúng tôi sẽ phản hồi trong thời gian sớm nhất!
+×
+[2025-11-09 21:23:10] 📸 Đã lưu ảnh thông báo thành công: c:\xampp\htdocs\webbansach\test case\liên hệ\screenshots\success_alert_1762698190.png
+[2025-11-09 21:23:11] 📸 Đã lưu ảnh toàn màn hình sau khi gửi: c:\xampp\htdocs\webbansach\test case\liên hệ\screenshots\success_page_1762698190.png
+[2025-11-09 21:23:11] 🔄 Bước 5: Đang xác minh kết quả...
+[2025-11-09 21:23:11] 📸 Đã lưu ảnh sau khi gửi: c:\xampp\htdocs\webbansach\test case\liên hệ\screenshots\after_submit_1762698191.png
+[2025-11-09 21:23:11] ✅ Gửi tin nhắn thành công!
+[2025-11-09 21:23:11] 📄 Đã lưu báo cáo kiểm thử: c:\xampp\htdocs\webbansach\test case\liên hệ\kết quả test\test_log_1762698183_report.txt
+[2025-11-09 21:23:11] 📊 Đã lưu báo cáo Excel: c:\xampp\htdocs\webbansach\test case\liên hệ\kết quả test\test_log_1762698183_report.xlsx
+[2025-11-09 21:23:13] 👋 Đã đóng trình duyệt

@@ -491,7 +491,7 @@ def xac_nhan_don_hang(driver, thu_muc_ket_qua, reporter=None):
 
 def main():
     # Tạo thư mục kết quả
-    thu_muc_ket_qua = os.path.join(os.path.dirname(os.path.abspath(__file__)), "test_results")
+    thu_muc_ket_qua = os.path.join(os.path.dirname(os.path.abspath(__file__)), "kết quả test")
     if not os.path.exists(thu_muc_ket_qua):
         os.makedirs(thu_muc_ket_qua)
     in_thong_bao(f"Thư mục kết quả: {thu_muc_ket_qua}")

@@ -13,438 +13,71 @@ from selenium.common.exceptions import TimeoutException, NoSuchElementException,
 from openpyxl import Workbook
 from openpyxl.styles import Font, PatternFill, Alignment, Border, Side
 from openpyxl.drawing.image import Image as XLImage
+from openpyxl.utils import get_column_letter
 from PIL import Image as PILImage
 import traceback
 
-# Tạo thư mục kết quả
-def tao_thu_muc_ket_qua():
-    base_dir = os.path.join(os.path.dirname(os.path.abspath(__file__)), "ket_qua_test")
-    if not os.path.exists(base_dir):
-        os.makedirs(base_dir)
-    
-    # Tạo thư mục theo thời gian
-    thoi_gian = datetime.now().strftime("%Y%m%d_%H%M%S")
-    thu_muc_test = os.path.join(base_dir, f"tc_mua_ngay_da_dang_nhap_{thoi_gian}")
-    os.makedirs(thu_muc_test)
-    
-    return thu_muc_test
+# Import từ test_utils
+import sys
+sys.path.append(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
+from test_utils import TestReporter, in_thong_bao as in_thong_bao_utils, tao_thu_muc_ket_qua as tao_thu_muc_ket_qua_utils
 
-class TestReporter:
-    def __init__(self, test_name):
-        self.test_name = test_name
-        self.wb = Workbook()
-        # Tạo sheet kết quả chính
-        self.ws = self.wb.active
-        self.ws.title = "Kết quả kiểm thử"
-        # Tạo sheet thông tin đơn hàng
-        self.ws_order = self.wb.create_sheet("Thông tin đơn hàng")
-        self.current_row = 1
-        self.screenshot_count = 0
-        self.test_steps = []
-        self.order_info = {}
-        self.setup_worksheet()
-        self.setup_order_sheet()
-        
-    def setup_worksheet(self):
-        # Set up column headers
-        headers = ["Bước thực hiện", "Trạng thái", "Ghi chú"]
-        for col_num, header in enumerate(headers, 1):
-            cell = self.ws.cell(row=self.current_row, column=col_num, value=header)
-            cell.font = Font(bold=True, color="000000")
-            cell.fill = PatternFill(start_color="D9EAD3", end_color="D9EAD3", fill_type="solid")
-            
-        # Set column widths
-        self.ws.column_dimensions['A'].width = 50
-        self.ws.column_dimensions['B'].width = 15
-        self.ws.column_dimensions['C'].width = 50
-        
-        # Định dạng cột
-        for col in self.ws.columns:
-            for cell in col:
-                cell.alignment = Alignment(vertical='center', wrap_text=True)
-    
-    def setup_order_sheet(self):
-        """Thiết lập sheet thông tin đơn hàng"""
-        # Tiêu đề
-        self.ws_order.merge_cells('A1:B1')
-        title_cell = self.ws_order['A1']
-        title_cell.value = "THÔNG TIN ĐƠN HÀNG"
-        title_cell.font = Font(bold=True, size=14, color="FFFFFF")
-        title_cell.fill = PatternFill(start_color="4472C4", end_color="4472C4", fill_type="solid")
-        title_cell.alignment = Alignment(horizontal='center', vertical='center')
-        
-        # Đặt chiều cao hàng tiêu đề
-        self.ws_order.row_dimensions[1].height = 25
-        
-        # Đặt chiều rộng cột
-        self.ws_order.column_dimensions['A'].width = 25
-        self.ws_order.column_dimensions['B'].width = 50
-        
-        # Thêm thông tin test case
-        self.ws_order.append(["Tên test case", self.test_name])
-        self.ws_order.append(["Thời gian bắt đầu", datetime.now().strftime('%d/%m/%Y %H:%M:%S')])
-        self.ws_order.append(["Trạng thái", "Đang thực hiện..."])
-        
-        # Định dạng các ô
-        for row in self.ws_order.iter_rows(min_row=2, max_row=4, min_col=1, max_col=2):
-            for cell in row:
-                cell.font = Font(size=11)
-                cell.border = Border(left=Side(style='thin'), right=Side(style='thin'), 
-                                   top=Side(style='thin'), bottom=Side(style='thin'))
-        
-        # Căn giữa cột đầu tiên
-        for row in self.ws_order.iter_rows(min_row=2, max_row=4, min_col=1, max_col=1):
-            for cell in row:
-                cell.font = Font(bold=True)
-                cell.fill = PatternFill(start_color="F2F2F2", end_color="F2F2F2", fill_type="solid")
-    
-    def update_order_info(self, order_data):
-        """Cập nhật thông tin đơn hàng vào sheet"""
-        if not order_data:
-            return
-            
-        # Lưu thông tin đơn hàng
-        self.order_info.update(order_data)
-        
-        # Xóa dữ liệu cũ (giữ lại 4 dòng tiêu đề)
-        for row in range(5, self.ws_order.max_row + 1):
-            for col in range(1, 3):
-                self.ws_order.cell(row=row, column=col).value = None
-        
-        # Thêm thông tin đơn hàng
-        row = 5
-        
-        # Thêm thông tin cơ bản
-        for key in ['Mã đơn hàng', 'Thời gian đặt hàng', 'Tổng tiền', 'Phương thức thanh toán', 'Trạng thái đơn hàng']:
-            if key in order_data:
-                self.ws_order.cell(row=row, column=1, value=key).font = Font(bold=True)
-                self.ws_order.cell(row=row, column=1).fill = PatternFill(
-                    start_color="F2F2F2", end_color="F2F2F2", fill_type="solid")
-                self.ws_order.cell(row=row, column=2, value=order_data[key])
-                row += 1
-        
-        # Thêm thông tin sản phẩm
-        if 'san_pham' in order_data and order_data['san_pham']:
-            self.ws_order.cell(row=row, column=1, value="Sản phẩm đã đặt").font = Font(bold=True, color="FFFFFF")
-            self.ws_order.cell(row=row, column=1).fill = PatternFill(
-                start_color="4472C4", end_color="4472C4", fill_type="solid")
-            self.ws_order.merge_cells(start_row=row, start_column=1, end_row=row, end_column=2)
-            row += 1
-            
-            # Đặt tiêu đề cột cho bảng sản phẩm
-            headers = ["Tên sản phẩm", "Số lượng", "Đơn giá", "Thành tiền"]
-            for col, header in enumerate(headers, 1):
-                cell = self.ws_order.cell(row=row, column=col, value=header)
-                cell.font = Font(bold=True)
-                cell.fill = PatternFill(start_color="D9EAD3", end_color="D9EAD3", fill_type="solid")
-            row += 1
-            
-            # Thêm từng sản phẩm
-            if isinstance(order_data['san_pham'], list):
-                for sp in order_data['san_pham']:
-                    if isinstance(sp, dict):
-                        # Xử lý sản phẩm dạng dict
-                        self.ws_order.cell(row=row, column=1, value=sp.get('ten', ''))
-                        self.ws_order.cell(row=row, column=2, value=sp.get('so_luong', 1))
-                        self.ws_order.cell(row=row, column=3, value=sp.get('don_gia', ''))
-                        self.ws_order.cell(row=row, column=4, value=sp.get('thanh_tien', ''))
-                    else:
-                        # Xử lý sản phẩm dạng chuỗi
-                        self.ws_order.cell(row=row, column=1, value=str(sp))
-                        self.ws_order.merge_cells(start_row=row, start_column=1, end_row=row, end_column=4)
-                    row += 1
-            
-            # Thêm tổng cộng
-            if 'tong_tien' in order_data:
-                self.ws_order.cell(row=row, column=3, value="Tổng cộng:").font = Font(bold=True)
-                self.ws_order.cell(row=row, column=4, value=order_data['tong_tien']).font = Font(bold=True, color="FF0000")
-                row += 1
-            
-            row += 1  # Thêm dòng trống
-        
-        # Thêm thông tin khác nếu có
-        for key, value in order_data.items():
-            if key not in ['Mã đơn hàng', 'Thời gian đặt hàng', 'Tổng tiền', 
-                         'Phương thức thanh toán', 'Trạng thái đơn hàng', 'san_pham', 'tong_tien']:
-                self.ws_order.cell(row=row, column=1, value=key).font = Font(bold=True)
-                self.ws_order.cell(row=row, column=1).fill = PatternFill(
-                    start_color="F2F2F2", end_color="F2F2F2", fill_type="solid")
-                self.ws_order.cell(row=row, column=2, value=str(value))
-                row += 1
-        
-        # Tự động điều chỉnh độ rộng cột
-        for col in self.ws_order.columns:
-            max_length = 0
-            column = col[0].column_letter
-            for cell in col:
-                try:
-                    if len(str(cell.value)) > max_length:
-                        max_length = len(str(cell.value))
-                except:
-                    pass
-            adjusted_width = (max_length + 2) * 1.2
-            self.ws_order.column_dimensions[column].width = min(adjusted_width, 50)
-        
-        # Thêm đường viền cho các ô
-        for r in range(1, row):
-            for c in range(1, 5):
-                cell = self.ws_order.cell(row=r, column=c)
-                if cell.value:  # Chỉ thêm border cho ô có dữ liệu
-                    cell.border = Border(left=Side(style='thin'), right=Side(style='thin'), 
-                                       top=Side(style='thin'), bottom=Side(style='thin'))
-        
-        # Cập nhật thông tin đơn hàng vào báo cáo
-        if hasattr(self, 'ws_order'):
-            self.ws_order.sheet_state = 'visible'
-        
-    def add_step(self, description, status='PASS', notes=''):
-        """Add a test step to the report"""
-        # Save step info to list
-        step_info = {
-            'description': description,
-            'status': status,
-            'notes': notes,
-            'screenshot': None,
-            'timestamp': datetime.now().strftime('%H:%M:%S')
-        }
-        self.test_steps.append(step_info)
-        
-        # Add to worksheet with timestamp
-        self.ws.append([
-            f"[{step_info['timestamp']}] {description}",
-            status,
-            notes
-        ])
-        
-        # Format status cell
-        status_cell = self.ws.cell(row=self.current_row, column=2)
-        if status == 'PASS' or status == 'THÀNH CÔNG':
-            status_cell.fill = PatternFill(start_color="C6EFCE", end_color="C6EFCE", fill_type="solid")
-            status_cell.font = Font(color="006100", bold=True)
-        elif status in ['FAIL', 'ERROR', 'LỖI', 'LOI']:
-            status_cell.fill = PatternFill(start_color="FFC7CE", end_color="FFC7CE", fill_type="solid")
-            status_cell.font = Font(color="9C0006", bold=True)
+# Sử dụng TestReporter từ test_utils
+# TestReporter sẽ được import từ test_utils
+
+def in_thong_bao(*args, **kwargs):
+    """In thông báo ra màn hình và thêm vào báo cáo.
+    Hỗ trợ các cách gọi:
+    - in_thong_bao(reporter, "Thông điệp", ...)
+    - in_thong_bao("Thông điệp", reporter=reporter, ...)
+    - in_thong_bao("Thông điệp", ...)
+    """
+    reporter = None
+    noi_dung = ''
+
+    # Lấy reporter từ kwargs nếu có
+    if 'reporter' in kwargs and kwargs['reporter'] is not None:
+        reporter = kwargs.pop('reporter')
+
+    # Phân tích args
+    if len(args) == 0:
+        pass
+    elif len(args) == 1:
+        # Có thể là (noi_dung,) hoặc (reporter,)
+        if hasattr(args[0], 'add_step'):
+            reporter = args[0]
         else:
-            status_cell.fill = PatternFill(start_color="FFEB9C", end_color="FFEB9C", fill_type="solid")
-            status_cell.font = Font(color="9C5700")
-            
-        # Nếu là thông báo đặt hàng thành công, cập nhật thông tin đơn hàng
-        if "Đặt hàng thành công" in description and notes:
-            order_data = {}
-            for line in notes.split('\n'):
-                if ':' in line:
-                    key, value = line.split(':', 1)
-                    order_data[key.strip()] = value.strip()
-            self.update_order_info(order_data)
-            
-        # Center align cells
-        for col in range(1, 4):
-            self.ws.cell(row=self.current_row, column=col).alignment = Alignment(
-                vertical='center', 
-                wrap_text=True
-            )
-            
-        self.current_row += 1
-        
-    def add_screenshot(self, image_path, description=""):
-        """Add a screenshot to the report with improved formatting"""
-        try:
-            if not os.path.exists(image_path):
-                self.add_step(f"Không tìm thấy ảnh: {image_path}", "CẢNH BÁO")
-                return False
-                
-            # Thêm mô tả ảnh với định dạng đẹp hơn
-            if description:
-                cell = self.ws.cell(row=self.current_row, column=1, value=f"Hình ảnh: {description}")
-                cell.font = Font(bold=True, color="2E75B6")
-                cell.fill = PatternFill(start_color="E2EFDA", end_color="E2EFDA", fill_type="solid")
-                self.ws.merge_cells(start_row=self.current_row, start_column=1, end_row=self.current_row, end_column=3)
-                self.current_row += 1
-            
-            # Đọc và xử lý ảnh
-            img = PILImage.open(image_path)
-            
-            # Tính toán kích thước mới để phù hợp với Excel
-            max_width = 800
-            max_height = 500
-            
-            # Lấy tỷ lệ co giãn
-            width_ratio = max_width / img.width
-            height_ratio = max_height / img.height
-            
-            # Chọn tỷ lệ nhỏ hơn để đảm bảo ảnh vừa với cả hai chiều
-            scale = min(width_ratio, height_ratio, 1.0)  # Không phóng to ảnh nhỏ hơn kích thước gốc
-            
-            # Tính kích thước mới
-            new_width = int(img.width * scale)
-            new_height = int(img.height * scale)
-            
-            # Thay đổi kích thước ảnh
-            img = img.resize((new_width, new_height), PILImage.Resampling.LANCZOS)
-            
-            # Lưu ảnh đã xử lý vào file tạm
-            temp_img_path = os.path.join(os.path.dirname(image_path), f"excel_{os.path.basename(image_path)}")
-            img.save(temp_img_path, quality=85)  # Giảm chất lượng để giảm kích thước file
-            
-            try:
-                # Thêm ảnh vào Excel
-                img_for_excel = XLImage(temp_img_path)
-                
-                # Đặt vị trí ảnh (căn giữa)
-                img_col = 'A'
-                img_row = self.current_row
-                
-                # Thêm ảnh vào ô A hiện tại
-                self.ws.add_image(img_for_excel, f'{img_col}{img_row}')
-                
-                # Điều chỉnh chiều cao hàng để vừa với ảnh
-                # Chuyển đổi từ pixel sang đơn vị hàng Excel (xấp xỉ)
-                row_height = img.height * 0.75
-                self.ws.row_dimensions[img_row].height = min(row_height, 409)  # Giới hạn chiều cao tối đa của Excel
-                
-                # Điều chỉnh cột A để vừa với ảnh
-                col_letter = img_col
-                col_width = (img.width / 7) + 2  # Điều chỉnh tỷ lệ cho phù hợp
-                current_width = self.ws.column_dimensions[col_letter].width or 8.43  # Giá trị mặc định của Excel
-                self.ws.column_dimensions[col_letter].width = min(max(col_width, current_width), 50)  # Giới hạn độ rộng tối đa
-                
-                # Thêm border cho ảnh
-                for r in range(img_row, img_row + int(img.height/15) + 1):
-                    for c in range(1, 4):  # Cột A đến C
-                        cell = self.ws.cell(row=r, column=c)
-                        if not cell.value:  # Chỉ thêm border nếu ô trống
-                            cell.border = Border(
-                                left=Side(style='thin'),
-                                right=Side(style='thin'),
-                                top=Side(style='thin'),
-                                bottom=Side(style='thin')
-                            )
-                
-                self.current_row += int(img.height/15) + 2  # Thêm khoảng cách sau ảnh
-                
-            except Exception as img_error:
-                self.add_step(f"Lỗi khi thêm ảnh vào Excel: {str(img_error)[:200]}", "LỖI")
-                return False
-            finally:
-                # Xóa file tạm
-                if os.path.exists(temp_img_path):
-                    try:
-                        os.remove(temp_img_path)
-                    except:
-                        pass
-            
-            return True
-            
-        except Exception as e:
-            error_msg = str(e)[:200]
-            print(f"Lỗi khi xử lý ảnh: {error_msg}")
-            self.add_step(f"Lỗi khi xử lý ảnh: {error_msg}", "LỖI")
-            return False
-    
-    def save_report(self, folder_path):
-        """Save the report to an Excel file"""
-        try:
-            # Create directory if it doesn't exist
-            if not os.path.exists(folder_path):
-                os.makedirs(folder_path)
-            
-            # Cập nhật thời gian kết thúc
-            end_time = datetime.now().strftime('%d/%m/%Y %H:%M:%S')
-            self.ws_order['B4'] = end_time
-            
-            # Thêm thống kê test case
-            total_steps = len(self.test_steps)
-            passed = sum(1 for s in self.test_steps if s['status'] in ['PASS', 'THÀNH CÔNG'])
-            failed = sum(1 for s in self.test_steps if s['status'] in ['FAIL', 'ERROR', 'LỖI', 'LOI'])
-            
-            # Thêm thông tin thống kê vào sheet thông tin đơn hàng
-            self.ws_order.append(["Tổng số bước", total_steps])
-            self.ws_order.append(["Thành công", passed])
-            self.ws_order.append(["Thất bại", failed])
-            
-            # Định dạng các ô thống kê
-            for row in range(5, 8):
-                self.ws_order.cell(row=row, column=1).font = Font(bold=True)
-                self.ws_order.cell(row=row, column=1).fill = PatternFill(
-                    start_color="F2F2F2", end_color="F2F2F2", fill_type="solid")
-                
-                for col in [1, 2]:
-                    cell = self.ws_order.cell(row=row, column=col)
-                    cell.border = Border(left=Side(style='thin'), right=Side(style='thin'), 
-                                       top=Side(style='thin'), bottom=Side(style='thin'))
-            
-            # Điều chỉnh chiều rộng cột cho phù hợp
-            for column in self.ws.columns:
-                max_length = 0
-                column_letter = column[0].column_letter
-                for cell in column:
-                    try:
-                        if len(str(cell.value)) > max_length:
-                            max_length = len(str(cell.value))
-                    except:
-                        pass
-                adjusted_width = (max_length + 2) * 1.2
-                self.ws.column_dimensions[column_letter].width = min(adjusted_width, 100)
-            
-            # Generate report filename
-            timestamp = datetime.now().strftime("%Y%m%d_%H%M%S")
-            report_filename = os.path.join(folder_path, f"ket_qua_kiem_thu_{timestamp}.xlsx")
-            
-            # Save the file
-            try:
-                self.wb.save(report_filename)
-                print(f"\nĐã lưu báo cáo tại: {os.path.abspath(report_filename)}")
-                
-                # Try to open the file automatically
-                try:
-                    if os.name == 'nt':  # For Windows
-                        os.startfile(os.path.abspath(report_filename))
-                    elif os.name == 'posix':  # For macOS and Linux
-                        if sys.platform == 'darwin':  # macOS
-                            os.system(f'open "{os.path.abspath(report_filename)}"')
-                        else:  # Linux
-                            os.system(f'xdg-open "{os.path.abspath(report_filename)}"')
-                except Exception as e:
-                    print(f"Không thể mở file tự động: {str(e)}")
-                
-                return report_filename
-                
-            except PermissionError:
-                # Nếu không thể lưu file, thử lưu với tên khác
-                alt_filename = os.path.join(folder_path, f"ket_qua_kiem_thu_{timestamp}_1.xlsx")
-                self.wb.save(alt_filename)
-                print(f"Lưu file thay thế tại: {os.path.abspath(alt_filename)}")
-                return alt_filename
-            
-        except Exception as e:
-            print(f"Lỗi khi lưu báo cáo: {str(e)}")
-            import traceback
-            traceback.print_exc()
-            return None
-
-def in_thong_bao(buoc, trang_thai="", reporter=None, notes=""):
-    """Hiển thị thông báo từng bước thực hiện và thêm vào báo cáo nếu có reporter"""
-    # Hiển thị ra console
-    if trang_thai.upper() == "OK":
-        print(f"[✓] {buoc}")
-        status = "PASS"
-    elif trang_thai.upper() in ["LOI", "LỖI"]:
-        print(f"[✗] {buoc}")
-        status = "ERROR"
+            noi_dung = args[0]
     else:
-        print(f"[ ] {buoc}")
-        status = "INFO"
-    
-    sys.stdout.flush()
-    
-    # Thêm vào báo cáo nếu có reporter
-    if reporter:
-        reporter.add_step(description=buoc, status=status, notes=notes)
-        
-    return status
+        # (reporter, noi_dung, ...)
+        if hasattr(args[0], 'add_step'):
+            reporter = args[0]
+            noi_dung = args[1]
+        else:
+            # (noi_dung, ...), giữ nguyên reporter từ kwargs
+            noi_dung = args[0]
+
+    # Lấy các tham số mặc định còn lại từ kwargs
+    status = kwargs.pop('status', 'PASS')
+    input_data = kwargs.pop('input_data', '')
+    output = kwargs.pop('output', '')
+    expected = kwargs.pop('expected', '')
+    screenshot_path = kwargs.pop('screenshot_path', None)
+
+    # Đảm bảo reporter hợp lệ
+    try:
+        _ = getattr(reporter, 'add_step', None)
+    except Exception:
+        reporter = None
+
+    return in_thong_bao_utils(reporter, noi_dung, status, input_data, output, expected, screenshot_path, **kwargs)
+
+def tao_thu_muc_ket_qua(test_name, base_dir=None):
+    """Tạo thư mục kết quả bằng tiện ích từ test_utils"""
+    return tao_thu_muc_ket_qua_utils(test_name, base_dir)
 
 def chup_man_hinh(driver, ten_file, reporter=None, description=""):
-    """Chụp màn hình và lưu vào file"""
+    """Chụp màn hình và lưu vào file, trả về đường dẫn file"""
     try:
         # Tạo thư mục nếu chưa tồn tại
         os.makedirs(os.path.dirname(ten_file), exist_ok=True)
@@ -453,14 +86,23 @@ def chup_man_hinh(driver, ten_file, reporter=None, description=""):
         driver.save_screenshot(ten_file)
         
         # Thêm vào báo cáo nếu có reporter
-        if reporter and description:
-            reporter.add_screenshot(ten_file, description)
+        if reporter and description and os.path.exists(ten_file):
+            # Thêm bước với screenshot
+            reporter.add_step(
+                description=description,
+                status='INFO',
+                input_data='',
+                output=f'Đã chụp màn hình: {os.path.basename(ten_file)}',
+                expected='Chụp màn hình thành công',
+                screenshot_path=ten_file
+            )
             
-        return True
+        return ten_file
     except Exception as e:
         error_msg = f"Lỗi khi chụp màn hình: {str(e)}"
-        in_thong_bao(error_msg, "LỖI", reporter, error_msg)
-        return False
+        if reporter:
+            in_thong_bao(reporter, error_msg, 'ERROR', output=error_msg)
+        return None
 
 def kiem_tra_phan_tu(driver, loai, gia_tri, timeout=10, reporter=None):
     """Kiểm tra sự tồn tại của phần tử"""
@@ -501,119 +143,148 @@ def kiem_tra_dang_nhap_thanh_cong(driver):
 def dang_nhap(driver, tai_khoan, mat_khau, thu_muc_ket_qua, reporter=None):
     """Thực hiện đăng nhập vào hệ thống"""
     try:
-        in_thong_bao("Đang thực hiện đăng nhập...")
+        in_thong_bao(reporter, "Đang thực hiện đăng nhập...", "INFO", 
+                    input_data=f"Tài khoản: {tai_khoan}",
+                    expected="Đăng nhập thành công")
         
         # Mở trang đăng nhập
-        in_thong_bao("   - Đang mở trang đăng nhập...")
+        in_thong_bao(reporter, "Mở trang đăng nhập", "INFO", 
+                    input_data="http://localhost/webbansach/dang-nhap.php",
+                    expected="Trang đăng nhập được tải thành công")
         driver.get("http://localhost/webbansach/dang-nhap.php")
         time.sleep(2)
         
         # Chụp màn hình trước khi đăng nhập
-        chup_man_hinh(driver, os.path.join(thu_muc_ket_qua, "truoc_dang_nhap.png"))
+        screenshot_path = chup_man_hinh(driver, os.path.join(thu_muc_ket_qua, "truoc_dang_nhap.png"), 
+                                       reporter, "Trang đăng nhập")
         
         # Tìm và điền thông tin đăng nhập
-        in_thong_bao("   - Đang điền thông tin đăng nhập...")
+        in_thong_bao(reporter, "Tìm và điền thông tin đăng nhập", "INFO", 
+                    input_data=f"Tài khoản: {tai_khoan}",
+                    expected="Điền thành công tên đăng nhập và mật khẩu")
         
-        # Tìm và điền tên đăng nhập (sử dụng ID 'email1')
+        # Tìm và điền tên đăng nhập (sử dụng ID 'email1' hoặc name 'taikhoan')
+        o_tai_khoan = None
         try:
             o_tai_khoan = WebDriverWait(driver, 10).until(
                 EC.presence_of_element_located((By.ID, "email1"))
             )
-            o_tai_khoan.clear()
-            o_tai_khoan.send_keys(tai_khoan)
-            in_thong_bao("   - Đã nhập tên đăng nhập", "OK")
-            time.sleep(1)
-        except Exception as e:
-            in_thong_bao(f"   - Không tìm thấy ô tên đăng nhập (ID: email1): {str(e)}", "LOI")
-            # Thử tìm bằng name nếu không tìm thấy bằng ID
+        except:
             try:
-                o_tai_khoan = driver.find_element(By.NAME, "taikhoan")
-                o_tai_khoan.clear()
-                o_tai_khoan.send_keys(tai_khoan)
-                in_thong_bao("   - Đã nhập tên đăng nhập (tìm bằng name)", "OK")
-                time.sleep(1)
-            except Exception as e2:
-                in_thong_bao(f"   - Không thể tìm thấy ô tên đăng nhập: {str(e2)}", "LOI")
-                chup_man_hinh(driver, os.path.join(thu_muc_ket_qua, "loi_tim_o_dang_nhap.png"))
+                o_tai_khoan = WebDriverWait(driver, 10).until(
+                    EC.presence_of_element_located((By.NAME, "taikhoan"))
+                )
+            except:
+                in_thong_bao(reporter, "Không tìm thấy ô tên đăng nhập", "FAIL",
+                            output="Không tìm thấy ô tên đăng nhập bằng ID hoặc name",
+                            expected="Tìm thấy ô tên đăng nhập")
                 return False
+        
+        o_tai_khoan.clear()
+        o_tai_khoan.send_keys(tai_khoan)
+        in_thong_bao(reporter, "Đã nhập tên đăng nhập", "PASS",
+                    input_data=tai_khoan,
+                    output="Đã nhập thành công tên đăng nhập",
+                    expected="Nhập tên đăng nhập thành công")
+        time.sleep(1)
 
-        # Tìm và điền mật khẩu (sử dụng ID 'login-password')
+        # Tìm và điền mật khẩu (sử dụng ID 'login-password' hoặc name 'matkhau')
+        o_mat_khau = None
         try:
             o_mat_khau = WebDriverWait(driver, 10).until(
                 EC.presence_of_element_located((By.ID, "login-password"))
             )
-            o_mat_khau.clear()
-            o_mat_khau.send_keys(mat_khau)
-            in_thong_bao("   - Đã nhập mật khẩu", "OK")
-            time.sleep(1)
-        except Exception as e:
-            in_thong_bao(f"   - Không tìm thấy ô mật khẩu (ID: login-password): {str(e)}", "LOI")
-            # Thử tìm bằng name nếu không tìm thấy bằng ID
+        except:
             try:
-                o_mat_khau = driver.find_element(By.NAME, "matkhau")
-                o_mat_khau.clear()
-                o_mat_khau.send_keys(mat_khau)
-                in_thong_bao("   - Đã nhập mật khẩu (tìm bằng name)", "OK")
-                time.sleep(1)
-            except Exception as e2:
-                in_thong_bao(f"   - Không thể tìm thấy ô mật khẩu: {str(e2)}", "LOI")
-                chup_man_hinh(driver, os.path.join(thu_muc_ket_qua, "loi_tim_mat_khau.png"))
+                o_mat_khau = WebDriverWait(driver, 10).until(
+                    EC.presence_of_element_located((By.NAME, "matkhau"))
+                )
+            except:
+                in_thong_bao(reporter, "Không tìm thấy ô mật khẩu", "FAIL",
+                            output="Không tìm thấy ô mật khẩu bằng ID hoặc name",
+                            expected="Tìm thấy ô mật khẩu")
                 return False
 
+        o_mat_khau.clear()
+        o_mat_khau.send_keys(mat_khau)
+        in_thong_bao(reporter, "Đã nhập mật khẩu", "PASS",
+                    input_data="***",
+                    output="Đã nhập thành công mật khẩu",
+                    expected="Nhập mật khẩu thành công")
+        time.sleep(1)
+
         # Chụp màn hình sau khi điền thông tin
-        chup_man_hinh(driver, os.path.join(thu_muc_ket_qua, "sau_khi_dien_thong_tin.png"))
+        screenshot_path = chup_man_hinh(driver, os.path.join(thu_muc_ket_qua, "sau_khi_dien_thong_tin.png"),
+                                       reporter, "Sau khi điền thông tin đăng nhập")
         
         # Nhấn nút đăng nhập
+        in_thong_bao(reporter, "Nhấn nút đăng nhập", "INFO",
+                    expected="Nút đăng nhập được click thành công")
         try:
             # Thử tìm nút đăng nhập bằng nhiều cách khác nhau
+            nut_dang_nhap = None
             try:
-                # Cách 1: Tìm bằng name="dangnhap"
                 nut_dang_nhap = WebDriverWait(driver, 5).until(
                     EC.element_to_be_clickable((By.NAME, "dangnhap"))
                 )
             except:
-                # Cách 2: Tìm bằng CSS selector cho nút submit
                 try:
                     nut_dang_nhap = WebDriverWait(driver, 5).until(
                         EC.element_to_be_clickable((By.CSS_SELECTOR, "input[type='submit'][name='dangnhap']"))
                     )
                 except:
-                    # Cách 3: Tìm bất kỳ nút submit nào
-                    nut_dang_nhap = driver.find_element(By.CSS_SELECTOR, "button[type='submit'], input[type='submit']")
+                    try:
+                        nut_dang_nhap = driver.find_element(By.CSS_SELECTOR, "button[type='submit'], input[type='submit']")
+                    except:
+                        in_thong_bao(reporter, "Không tìm thấy nút đăng nhập", "FAIL",
+                                    output="Không tìm thấy nút đăng nhập",
+                                    expected="Tìm thấy nút đăng nhập")
+                        return False
             
             # Cuộn đến nút đăng nhập để đảm bảo nó hiển thị
             driver.execute_script("arguments[0].scrollIntoView(true);", nut_dang_nhap)
-            time.sleep(1)
+            time.sleep(0.5)
             
-            # Thử click bằng JavaScript nếu click thông thường không hoạt động
+            # Thử click bằng JavaScript
             try:
-                nut_dang_nhap.click()
-            except:
                 driver.execute_script("arguments[0].click();", nut_dang_nhap)
+            except:
+                nut_dang_nhap.click()
             
-            in_thong_bao("   - Đã nhấn nút đăng nhập", "OK")
+            in_thong_bao(reporter, "Đã nhấn nút đăng nhập", "PASS",
+                        output="Đã click nút đăng nhập thành công",
+                        expected="Click nút đăng nhập thành công")
             
             # Chờ chuyển trang hoặc cập nhật giao diện
-            in_thong_bao("   - Đang chờ xử lý đăng nhập...")
             time.sleep(3)  # Chờ đăng nhập xử lý
             
             # Kiểm tra kết quả đăng nhập
             thanh_cong, thong_bao = kiem_tra_dang_nhap_thanh_cong(driver)
             if thanh_cong:
-                in_thong_bao(f"   - {thong_bao}", "OK")
-                chup_man_hinh(driver, os.path.join(thu_muc_ket_qua, "dang_nhap_thanh_cong.png"))
+                screenshot_path = chup_man_hinh(driver, os.path.join(thu_muc_ket_qua, "dang_nhap_thanh_cong.png"),
+                                               reporter, "Đăng nhập thành công")
+                in_thong_bao(reporter, "Đăng nhập thành công", "PASS",
+                            output=thong_bao,
+                            expected="Đăng nhập thành công và chuyển về trang chủ")
                 return True
             else:
-                in_thong_bao(f"   - {thong_bao}", "LOI")
+                in_thong_bao(reporter, "Đăng nhập thất bại", "FAIL",
+                            output=thong_bao,
+                            expected="Đăng nhập thành công")
                 return False
                 
         except Exception as e:
-            in_thong_bao(f"   - Lỗi khi nhấn nút đăng nhập: {str(e)}", "LOI")
-            chup_man_hinh(driver, os.path.join(thu_muc_ket_qua, "loi_nhan_nut_dang_nhap.png"))
+            in_thong_bao(reporter, f"Lỗi khi nhấn nút đăng nhập: {str(e)}", "ERROR",
+                        output=str(e),
+                        expected="Nhấn nút đăng nhập thành công")
+            chup_man_hinh(driver, os.path.join(thu_muc_ket_qua, "loi_nhan_nut_dang_nhap.png"),
+                         reporter, "Lỗi nhấn nút đăng nhập")
             return False
             
     except Exception as e:
-        in_thong_bao(f"Lỗi khi thực hiện đăng nhập: {str(e)}", "LOI")
+        in_thong_bao(reporter, f"Lỗi khi thực hiện đăng nhập: {str(e)}", "ERROR",
+                    output=str(e),
+                    expected="Đăng nhập thành công")
         return False
 
 def mua_ngay_tu_banner(driver, thu_muc_ket_qua, reporter=None):
@@ -1172,7 +843,8 @@ def mua_ngay_tu_banner(driver, thu_muc_ket_qua, reporter=None):
 
 def main():
     # Tạo thư mục kết quả
-    thu_muc_ket_qua = tao_thu_muc_ket_qua()
+    test_name = "mua_ngay_da_dang_nhap"
+    thu_muc_ket_qua = tao_thu_muc_ket_qua(test_name)
     
     # Khởi tạo báo cáo
     reporter = TestReporter("Kiểm thử tính năng Mua ngay đã đăng nhập")

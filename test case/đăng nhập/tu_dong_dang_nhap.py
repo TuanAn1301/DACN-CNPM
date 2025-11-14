@@ -131,9 +131,14 @@ class TestReporter:
             print(f"Lỗi khi thêm ảnh vào báo cáo: {str(e)}")
             return None
     
-    def save_report(self, folder_path='test_results'):
+    def save_report(self, folder_path=None):
         """Lưu báo cáo ra file Excel"""
         try:
+            # Nếu không chỉ định folder_path, tạo folder "kết quả test" trong thư mục chứa file này
+            if folder_path is None:
+                current_dir = os.path.dirname(os.path.abspath(__file__))
+                folder_path = os.path.join(current_dir, "kết quả test")
+            
             # Tạo thư mục nếu chưa tồn tại
             if not os.path.exists(folder_path):
                 os.makedirs(folder_path)

@@ -373,12 +373,13 @@ def thuc_hien_test_case(driver, ten_tc, ten_dang_nhap, mat_khau, result_dir, rep
 
 def main():
     # Tạo cấu trúc thư mục kết quả
-    base_dir = os.path.abspath(os.path.join('test_results', 'dang_nhap'))
+    current_dir = os.path.dirname(os.path.abspath(__file__))
+    result_base_dir = os.path.join(current_dir, "kết quả test")
     test_type = 'thieu_thong_tin'
     timestamp = datetime.now().strftime("%Y%m%d_%H%M%S")
     
     # Tạo các thư mục cần thiết
-    result_dir = os.path.join(base_dir, test_type, f"test_run_{timestamp}")
+    result_dir = os.path.join(result_base_dir, test_type, f"test_run_{timestamp}")
     os.makedirs(result_dir, exist_ok=True)
     
     # Khởi tạo báo cáo

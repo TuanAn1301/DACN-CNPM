@@ -14,7 +14,7 @@ import io
 
 # Thêm thư mục cha vào PATH để import test_utils
 sys.path.append(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
-from test_utils import TestReporter, highlight_element, in_thong_bao, tao_thu_muc_ket_qua
+from test_utils import TestReporter, highlight_element, in_thong_bao, tao_thu_muc_ket_qua, lay_san_pham_ngau_nhien
 
 def chup_man_hinh(driver, save_path=None, element=None):
     """Chụp màn hình và trả về đối tượng ảnh"""
@@ -44,8 +44,8 @@ def chup_man_hinh(driver, save_path=None, element=None):
         return None
 
 
-def chup_thong_bao_thanh_cong(driver, screenshot_dir, reporter):
-    """Chụp thông báo thành công nếu có"""
+def chup_thong_bao_thanh_cong(driver, screenshot_dir):
+    """Chụp thông báo thành công nếu có và trả về (has_notification, notification_text)"""
     try:
         # Chờ một chút để thông báo xuất hiện
         time.sleep(1)
@@ -88,13 +88,11 @@ def chup_thong_bao_thanh_cong(driver, screenshot_dir, reporter):
                                     # Thử chụp riêng phần tử thông báo
                                     success_img = chup_man_hinh(driver, screenshot_path, element=element)
                                     if success_img:
-                                        reporter.add_screenshot(screenshot_path, f"Thông báo: {notification_text[:50]}...")
                                         return True, notification_text
                                 except:
                                     # Nếu không chụp được phần tử riêng, chụp toàn màn hình
                                     success_img = chup_man_hinh(driver, screenshot_path)
                                     if success_img:
-                                        reporter.add_screenshot(screenshot_path, f"Màn hình thông báo: {notification_text[:50]}...")
                                         return True, notification_text
                     except:
                         continue
@@ -109,7 +107,6 @@ def chup_thong_bao_thanh_cong(driver, screenshot_dir, reporter):
         timestamp = int(time.time())
         screenshot_path = os.path.join(screenshot_dir, f'full_page_after_delete_{timestamp}.png')
         chup_man_hinh(driver, screenshot_path)
-        reporter.add_screenshot(screenshot_path, "Màn hình sau khi xóa sản phẩm")
         
         # Kiểm tra xem có thông báo lỗi không
         try:
@@ -128,18 +125,38 @@ def chup_thong_bao_thanh_cong(driver, screenshot_dir, reporter):
         return False, error_msg
 
 
-def them_san_pham_vao_gio(driver, url_san_pham, reporter):
+def luu_screenshot(driver, thu_muc, ten_file):
+    """Lưu screenshot vào file và trả về đường dẫn"""
+    try:
+        os.makedirs(thu_muc, exist_ok=True)
+        screenshot_path = os.path.join(thu_muc, f'{ten_file}_{int(time.time())}.png')
+        driver.save_screenshot(screenshot_path)
+        return screenshot_path
+    except Exception as e:
+        print(f"Lỗi khi lưu screenshot: {str(e)}")
+        return None
+
+def them_san_pham_vao_gio(driver, url_san_pham, reporter, thu_muc_screenshot, ten_san_pham=""):
     """Thực hiện thêm sản phẩm vào giỏ hàng"""
     try:
         # Bước 1: Truy cập trang sản phẩm
         step = "Truy cập trang sản phẩm"
         input_data = f"URL: {url_san_pham}"
+        if ten_san_pham:
+            input_data += f"\nSản phẩm: {ten_san_pham}"
         expected = "Hiển thị trang sản phẩm thành công"
         
         driver.get(url_san_pham)
         time.sleep(2)
         
-        in_thong_bao(reporter, step, status='PASS', input_data=input_data, expected=expected)
+        # Chụp ảnh trang sản phẩm
+        screenshot_path = luu_screenshot(driver, thu_muc_screenshot, 'product_page')
+        
+        in_thong_bao(reporter, step, status='PASS',
+                    input_data=input_data,
+                    output=f"Đã tải trang sản phẩm: {url_san_pham}",
+                    expected=expected,
+                    screenshot_path=screenshot_path)
         time.sleep(2)  # Chờ trang web tải xong
 
         # Tìm và nhấn nút "Thêm Giỏ Hàng"
@@ -155,99 +172,65 @@ def them_san_pham_vao_gio(driver, url_san_pham, reporter):
             
             # Click vào nút
             nut_them_vao_gio.click()
+            time.sleep(2)
+            
+            # Chụp ảnh sau khi click
+            screenshot_path2 = luu_screenshot(driver, thu_muc_screenshot, 'after_add_to_cart')
+            
             in_thong_bao(reporter, 
                         "Đã nhấn nút 'Thêm Giỏ Hàng'", 
                         status='PASS',
                         input_data="Sử dụng selector: a.themgiohang",
-                        expected="Thêm sản phẩm vào giỏ hàng thành công")
-            
-            # Chờ một chút để xử lý
-            time.sleep(2)
+                        output="Đã click vào nút thêm giỏ hàng",
+                        expected="Thêm sản phẩm vào giỏ hàng thành công",
+                        screenshot_path=screenshot_path2)
             
             # Chụp ảnh màn hình xác nhận
-            try:
-                screenshot = chup_man_hinh(driver)
-                in_thong_bao(reporter, 
-                           "Xác nhận thêm vào giỏ hàng", 
-                           status='PASS',
-                           input_data="Kiểm tra thông báo thành công",
-                           expected="Hiển thị thông báo thêm vào giỏ hàng thành công")
-                return True
-            except Exception as e:
-                in_thong_bao(reporter, 
-                           "Không thể chụp ảnh xác nhận", 
-                           status='WARNING',
-                           input_data=str(e),
-                           expected="Lưu được ảnh chụp màn hình")
-                return True
+            screenshot_path3 = luu_screenshot(driver, thu_muc_screenshot, 'confirm_add')
+            
+            in_thong_bao(reporter, 
+                       "Xác nhận thêm vào giỏ hàng", 
+                       status='PASS',
+                       input_data="Kiểm tra thông báo thành công",
+                       output="Đã thêm sản phẩm vào giỏ hàng",
+                       expected="Hiển thị thông báo thêm vào giỏ hàng thành công",
+                       screenshot_path=screenshot_path3)
+            return True
                 
         except Exception as e:
             error_msg = f"Không tìm thấy nút 'Thêm Giỏ Hàng': {str(e)}"
+            screenshot_path = luu_screenshot(driver, thu_muc_screenshot, 'error_find_button')
+            
             in_thong_bao(reporter, 
                         "Lỗi khi tìm nút thêm vào giỏ", 
                         status='FAIL',
                         input_data=error_msg,
-                        expected="Tìm thấy và click được nút thêm vào giỏ")
-            return False
-                    
-            # Nếu không tìm thấy nút nào
-            error_msg = "Không tìm thấy nút 'Thêm vào giỏ hàng' với bất kỳ selector nào đã thử"
-            try:
-                screenshot = chup_man_hinh(driver)
-                in_thong_bao(reporter, 
-                           "Tìm nút thêm vào giỏ hàng", 
-                           status='FAIL',
-                           input_data="Kiểm tra các selector tìm nút thêm vào giỏ",
-                           expected="Tìm thấy nút thêm vào giỏ hàng")
-            except Exception as e:
-                in_thong_bao(reporter, 
-                           "Lỗi khi chụp ảnh màn hình lỗi", 
-                           status='ERROR',
-                           input_data=error_msg,
-                           expected="Chụp được ảnh màn hình lỗi")
-            return False
-            
-        except Exception as e:
-            error_msg = f"Lỗi khi thêm vào giỏ hàng: {str(e)}"
-            try:
-                screenshot = chup_man_hinh(driver)
-                in_thong_bao(reporter, 
-                           "Lỗi khi thêm vào giỏ hàng", 
-                           status='FAIL',
-                           input_data=error_msg,
-                           expected="Thêm sản phẩm vào giỏ hàng thành công")
-            except Exception as e:
-                in_thong_bao(reporter, 
-                           "Lỗi khi thêm vào giỏ hàng", 
-                           status='FAIL',
-                           input_data=error_msg,
-                           expected="Thêm sản phẩm vào giỏ hàng thành công")
+                        output=f"Lỗi: {str(e)}",
+                        expected="Tìm thấy và click được nút thêm vào giỏ",
+                        screenshot_path=screenshot_path)
             return False
 
     except Exception as e:
         error_msg = f"Lỗi khi thêm sản phẩm vào giỏ: {str(e)}"
-        try:
-            screenshot = chup_man_hinh(driver)
-            in_thong_bao(reporter, 
-                        "Lỗi nghiêm trọng khi thêm sản phẩm", 
-                        status='FAIL',
-                        input_data=error_msg,
-                        expected="Thực hiện các bước thêm sản phẩm thành công")
-        except Exception as e:
-            in_thong_bao(reporter, 
-                        "Lỗi nghiêm trọng khi thêm sản phẩm", 
-                        status='FAIL',
-                        input_data=error_msg,
-                        expected="Thực hiện các bước thêm sản phẩm thành công")
+        screenshot_path = luu_screenshot(driver, thu_muc_screenshot, 'error_add_product')
+        
+        in_thong_bao(reporter, 
+                    "Lỗi nghiêm trọng khi thêm sản phẩm", 
+                    status='FAIL',
+                    input_data=f"URL: {url_san_pham}",
+                    output=f"Lỗi: {error_msg}",
+                    expected="Thực hiện các bước thêm sản phẩm thành công",
+                    screenshot_path=screenshot_path)
         return False
 
-def kiem_tra_gio_hang(driver, reporter, screenshot_dir):
-    """Kiểm tra giỏ hàng sau khi thêm sản phẩm
+def kiem_tra_gio_hang(driver, reporter, screenshot_dir, ten_san_pham=""):
+    """Kiểm tra giỏ hàng sau khi thêm sản phẩm và thực hiện xóa sản phẩm
     
     Args:
         driver: WebDriver instance
         reporter: TestReporter instance for logging
         screenshot_dir: Directory to save screenshots
+        ten_san_pham: Tên sản phẩm (nếu có)
     """
     try:
         # Bước 1: Đi đến trang giỏ hàng
@@ -256,11 +239,15 @@ def kiem_tra_gio_hang(driver, reporter, screenshot_dir):
         driver.get(url_gio_hang)
         time.sleep(2)
         
+        screenshot_path = luu_screenshot(driver, screenshot_dir, 'cart_page')
+        
         in_thong_bao(reporter, 
                     step, 
-                    status='PASS', 
+                    status='PASS',
                     input_data=f"Truy cập URL: {url_gio_hang}",
-                    expected="Hiển thị trang giỏ hàng")
+                    output="Đã tải trang giỏ hàng",
+                    expected="Hiển thị trang giỏ hàng",
+                    screenshot_path=screenshot_path)
         
         # Bước 2: Kiểm tra sản phẩm trong giỏ hàng
         try:
@@ -268,474 +255,180 @@ def kiem_tra_gio_hang(driver, reporter, screenshot_dir):
                 EC.presence_of_element_located((By.CSS_SELECTOR, ".cart-table tbody tr:not(.cart-header)"))
             )
             
+            screenshot_path2 = luu_screenshot(driver, screenshot_dir, 'cart_with_products')
+            
+            in_thong_bao(reporter, 
+                        "Kiểm tra sản phẩm trong giỏ hàng", 
+                        status='PASS',
+                        input_data="Tìm kiếm sản phẩm trong bảng giỏ hàng",
+                        output=f"Tìm thấy sản phẩm trong giỏ hàng{f': {ten_san_pham}' if ten_san_pham else ''}",
+                        expected="Tìm thấy ít nhất 1 sản phẩm trong giỏ hàng",
+                        screenshot_path=screenshot_path2)
+            
+            # Bước 3: Thực hiện xóa sản phẩm khỏi giỏ hàng
             try:
-                screenshot = chup_man_hinh(driver)
-                in_thong_bao(reporter, 
-                            "Kiểm tra sản phẩm trong giỏ hàng", 
-                            status='PASS', 
-                            input_data="Tìm kiếm sản phẩm trong bảng giỏ hàng",
-                            expected="Tìm thấy ít nhất 1 sản phẩm trong giỏ hàng")
+                # Chụp ảnh giỏ hàng trước khi xóa
+                before_remove_screenshot = luu_screenshot(driver, screenshot_dir, 'before_delete')
                 
-                # Bước 3: Thực hiện xóa sản phẩm khỏi giỏ hàng
+                # Tìm và nhấn nút xóa sản phẩm
+                xoa_button = WebDriverWait(driver, 10).until(
+                    EC.element_to_be_clickable((By.CSS_SELECTOR, "a.xoa i.fa-trash-alt, a.xoa, .xoa"))
+                )
+                driver.execute_script("arguments[0].scrollIntoView({block: 'center'});", xoa_button)
+                highlight_element(driver, xoa_button)
+                time.sleep(1)
+                
+                # Click nút xóa
+                xoa_button.click()
+                time.sleep(1)
+                
+                # Xác nhận xóa trong hộp thoại
                 try:
-                    # Chụp ảnh giỏ hàng trước khi xóa
-                    before_remove_screenshot = os.path.join(screenshot_dir, f'before_remove_{int(time.time())}.png')
-                    chup_man_hinh(driver, before_remove_screenshot)
+                    # Chuyển sang hộp thoại alert và chấp nhận
+                    WebDriverWait(driver, 5).until(EC.alert_is_present())
+                    alert = driver.switch_to.alert
+                    alert_text = alert.text
+                    alert.accept()
+                    time.sleep(2)
                     
-                    # Tìm và nhấn nút xóa sản phẩm
-                    xoa_button = WebDriverWait(driver, 5).until(
-                        EC.element_to_be_clickable((By.CSS_SELECTOR, "a.xoa i.fa-trash-alt, a.xoa"))
-                    )
-                    driver.execute_script("arguments[0].scrollIntoView({block: 'center'});", xoa_button)
-                    time.sleep(1)  # Đợi một chút để đảm bảo nút hiển thị
+                    # Chụp ảnh sau khi xóa
+                    after_remove_screenshot = luu_screenshot(driver, screenshot_dir, 'after_delete')
                     
-                    # Click nút xóa
-                    xoa_button.click()
-                    time.sleep(1)  # Đợi hiển thị hộp thoại xác nhận
-                    
-                    # Xác nhận xóa trong hộp thoại
+                    # Kiểm tra thông báo thành công
                     try:
-                        # Chuyển sang hộp thoại alert và chấp nhận
-                        WebDriverWait(driver, 5).until(EC.alert_is_present())
-                        alert = driver.switch_to.alert
-                        alert_text = alert.text
-                        alert.accept()
-                        time.sleep(2)  # Đợi xử lý xóa
+                        # Kiểm tra xem có chuyển hướng về trang chủ không (vì giỏ hàng trống)
+                        WebDriverWait(driver, 5).until(
+                            lambda d: 'index.php' in d.current_url or \
+                            'giỏ hàng trống' in d.page_source.lower() or \
+                            'không có sản phẩm' in d.page_source.lower() or \
+                            len(driver.find_elements(By.CSS_SELECTOR, ".cart-table tbody tr:not(.cart-header)")) == 0
+                        )
                         
-                        # Chụp ảnh sau khi xóa
-                        after_remove_screenshot = os.path.join(screenshot_dir, f'after_remove_{int(time.time())}.png')
-                        chup_man_hinh(driver, after_remove_screenshot)
+                        # Chụp thông báo thành công nếu có
+                        has_notification, notification_text = chup_thong_bao_thanh_cong(driver, screenshot_dir)
                         
-                        # Kiểm tra thông báo thành công
-                        try:
-                            # Kiểm tra xem có chuyển hướng về trang chủ không (vì giỏ hàng trống)
-                            WebDriverWait(driver, 5).until(
-                                lambda d: 'index.php' in d.current_url or \
-                                'giỏ hàng trống' in d.page_source.lower() or \
-                                'không có sản phẩm' in d.page_source.lower()
-                            )
-                            
-                            # Chụp thông báo thành công nếu có
-                            has_notification, notification_text = chup_thong_bao_thanh_cong(driver, screenshot_dir, reporter)
-                            
-                            # Chụp ảnh màn hình kết quả cuối cùng
-                            final_screenshot = os.path.join(screenshot_dir, f'final_result_{int(time.time())}.png')
-                            chup_man_hinh(driver, final_screenshot)
-                            
-                            # Nếu không tìm thấy thông báo, sử dụng thông báo mặc định
-                            if not has_notification:
-                                notification_text = alert_text if alert_text else "Sản phẩm đã được xóa khỏi giỏ hàng"
-                                
+                        # Chụp ảnh màn hình kết quả cuối cùng
+                        final_screenshot = luu_screenshot(driver, screenshot_dir, 'final_result')
+                        
+                        # Nếu không tìm thấy thông báo, sử dụng thông báo mặc định
+                        if not has_notification:
+                            notification_text = alert_text if alert_text else "Sản phẩm đã được xóa khỏi giỏ hàng"
+                        
+                        # Kiểm tra xem giỏ hàng có trống không
+                        cart_items_after = driver.find_elements(By.CSS_SELECTOR, ".cart-table tbody tr:not(.cart-header)")
+                        
+                        if not cart_items_after or len(cart_items_after) == 0:
                             in_thong_bao(reporter,
                                        "Xác nhận xóa sản phẩm khỏi giỏ hàng",
                                        status='PASS',
-                                       input_data=f"Đã xác nhận xóa sản phẩm\nThông báo: {notification_text}",
-                                       expected="Xóa sản phẩm khỏi giỏ hàng thành công")
-                            
-                            # Thêm ảnh vào báo cáo
-                            reporter.add_screenshot(before_remove_screenshot, "Giỏ hàng trước khi xóa")
-                            reporter.add_screenshot(after_remove_screenshot, "Sau khi xóa sản phẩm")
-                            reporter.add_screenshot(final_screenshot, "Kết quả cuối cùng")
+                                       input_data=f"Sản phẩm: {ten_san_pham if ten_san_pham else 'Sản phẩm trong giỏ'}\nThông báo: {notification_text}",
+                                       output=f"Đã xóa sản phẩm thành công\nGiỏ hàng đã trống\nThông báo: {notification_text}",
+                                       expected="Xóa sản phẩm khỏi giỏ hàng thành công",
+                                       screenshot_path=final_screenshot)
                             
                             return True
+                        else:
+                            in_thong_bao(reporter,
+                                       "Xác nhận xóa sản phẩm",
+                                       status='WARNING',
+                                       input_data=f"Sản phẩm: {ten_san_pham if ten_san_pham else 'Sản phẩm trong giỏ'}",
+                                       output=f"Đã xác nhận xóa nhưng vẫn còn {len(cart_items_after)} sản phẩm trong giỏ",
+                                       expected="Giỏ hàng trống sau khi xóa",
+                                       screenshot_path=final_screenshot)
+                            return True
                             
-                        except Exception as e:
-                            # Nếu không tìm thấy thông báo, kiểm tra xem giỏ hàng có trống không
-                            try:
-                                cart_items = driver.find_elements(By.CSS_SELECTOR, ".cart-table tbody tr:not(.cart-header)")
-                                if not cart_items:
-                                    in_thong_bao(reporter,
-                                               "Xác nhận xóa sản phẩm khỏi giỏ hàng",
-                                               status='PASS',
-                                               input_data=f"Đã xác nhận xóa sản phẩm\nGiỏ hàng đã được làm trống",
-                                               expected="Xóa sản phẩm khỏi giỏ hàng thành công")
-                                    return True
-                                else:
-                                    raise Exception("Vẫn còn sản phẩm trong giỏ hàng sau khi xóa")
-                            except:
-                                raise Exception("Không xác nhận được kết quả sau khi xóa")
-                        
                     except Exception as e:
-                        raise Exception(f"Lỗi khi xử lý hộp thoại xác nhận: {str(e)}")
-                    
-                except Exception as e:
-                    error_msg = f"Lỗi khi thực hiện xóa sản phẩm: {str(e)}"
-                    print(f"DEBUG - {error_msg}")  # In lỗi ra console để debug
-                    in_thong_bao(reporter,
-                               "Lỗi khi xóa sản phẩm",
-                               status='FAIL',
-                               input_data=error_msg,
-                               expected="Xóa sản phẩm khỏi giỏ hàng thành công")
-                    
-                    # Chụp ảnh lỗi
-                    try:
-                        error_screenshot = os.path.join(screenshot_dir, f'error_{int(time.time())}.png')
-                        chup_man_hinh(driver, error_screenshot)
-                        reporter.add_screenshot(error_screenshot, "Lỗi khi xóa sản phẩm")
-                    except:
-                        pass
+                        # Kiểm tra xem giỏ hàng có trống không
+                        try:
+                            cart_items = driver.find_elements(By.CSS_SELECTOR, ".cart-table tbody tr:not(.cart-header)")
+                            if not cart_items:
+                                in_thong_bao(reporter,
+                                           "Xác nhận xóa sản phẩm khỏi giỏ hàng",
+                                           status='PASS',
+                                           input_data=f"Sản phẩm: {ten_san_pham if ten_san_pham else 'Sản phẩm trong giỏ'}",
+                                           output="Đã xác nhận xóa sản phẩm\nGiỏ hàng đã được làm trống",
+                                           expected="Xóa sản phẩm khỏi giỏ hàng thành công",
+                                           screenshot_path=after_remove_screenshot)
+                                return True
+                            else:
+                                error_msg = f"Vẫn còn {len(cart_items)} sản phẩm trong giỏ hàng sau khi xóa"
+                                in_thong_bao(reporter,
+                                           "Kiểm tra kết quả xóa",
+                                           status='FAIL',
+                                           input_data=f"Sản phẩm: {ten_san_pham if ten_san_pham else 'Sản phẩm trong giỏ'}",
+                                           output=error_msg,
+                                           expected="Giỏ hàng trống sau khi xóa",
+                                           screenshot_path=after_remove_screenshot)
+                                return False
+                        except:
+                            error_msg = f"Không xác nhận được kết quả sau khi xóa: {str(e)}"
+                            in_thong_bao(reporter,
+                                       "Lỗi khi xác nhận kết quả",
+                                       status='ERROR',
+                                       input_data=f"Sản phẩm: {ten_san_pham if ten_san_pham else 'Sản phẩm trong giỏ'}",
+                                       output=error_msg,
+                                       expected="Xác nhận được kết quả xóa",
+                                       screenshot_path=after_remove_screenshot)
+                            return False
                         
+                except Exception as e:
+                    error_msg = f"Lỗi khi xử lý hộp thoại xác nhận: {str(e)}"
+                    screenshot_path_error = luu_screenshot(driver, screenshot_dir, 'error_alert')
+                    
+                    in_thong_bao(reporter,
+                               "Lỗi khi xử lý hộp thoại xác nhận",
+                               status='ERROR',
+                               input_data=f"Sản phẩm: {ten_san_pham if ten_san_pham else 'Sản phẩm trong giỏ'}",
+                               output=error_msg,
+                               expected="Xuất hiện và xử lý được hộp thoại xác nhận",
+                               screenshot_path=screenshot_path_error)
                     return False
+                    
             except Exception as e:
-                in_thong_bao(reporter, 
-                            "Lỗi khi chụp ảnh giỏ hàng", 
-                            status='WARNING',
-                            input_data=str(e),
-                            expected="Chụp được ảnh giỏ hàng")
-                return True
-            
+                error_msg = f"Lỗi khi thực hiện xóa sản phẩm: {str(e)}"
+                print(f"DEBUG - {error_msg}")
+                screenshot_path_error = luu_screenshot(driver, screenshot_dir, 'error_delete')
+                
+                in_thong_bao(reporter,
+                           "Lỗi khi xóa sản phẩm",
+                           status='FAIL',
+                           input_data=f"Sản phẩm: {ten_san_pham if ten_san_pham else 'Sản phẩm trong giỏ'}",
+                           output=error_msg,
+                           expected="Xóa sản phẩm khỏi giỏ hàng thành công",
+                           screenshot_path=screenshot_path_error)
+                return False
+                
         except Exception as e:
             error_msg = "Không tìm thấy sản phẩm trong giỏ hàng!"
-            try:
-                screenshot = chup_man_hinh(driver)
-                in_thong_bao(reporter, 
-                            "Kiểm tra sản phẩm trong giỏ hàng", 
-                            status='FAIL',
-                            input_data=error_msg,
-                            expected="Tìm thấy sản phẩm trong giỏ hàng")
-            except Exception as e:
-                in_thong_bao(reporter, 
-                            "Lỗi khi kiểm tra giỏ hàng", 
-                            status='ERROR',
-                            input_data=error_msg,
-                            expected="Kiểm tra được nội dung giỏ hàng")
+            screenshot_path_error = luu_screenshot(driver, screenshot_dir, 'error_no_products')
+            
+            in_thong_bao(reporter, 
+                        "Kiểm tra sản phẩm trong giỏ hàng", 
+                        status='FAIL',
+                        input_data="Kiểm tra nội dung giỏ hàng",
+                        output=error_msg,
+                        expected="Tìm thấy sản phẩm trong giỏ hàng",
+                        screenshot_path=screenshot_path_error)
             return False
             
     except Exception as e:
         error_msg = f"Lỗi khi kiểm tra giỏ hàng: {str(e)}"
+        screenshot_path_error = luu_screenshot(driver, screenshot_dir, 'error_cart')
+        
         in_thong_bao(reporter, 
                     "Lỗi nghiêm trọng khi kiểm tra giỏ hàng", 
                     status='ERROR',
-                    input_data=error_msg,
-                    expected="Kiểm tra được nội dung giỏ hàng")
+                    input_data="Kiểm tra giỏ hàng",
+                    output=error_msg,
+                    expected="Kiểm tra được nội dung giỏ hàng",
+                    screenshot_path=screenshot_path_error)
         return False
-    print("="*80)
-    print("KIỂM TRA TÍNH NĂNG THÊM SẢN PHẨM VÀO GIỎ HÀNG")
-    print("="*80)
-    
-    # Tạo thư mục lưu kết quả
-    test_start_time = datetime.now()
-    timestamp = test_start_time.strftime("%Y%m%d_%H%M%S")
-    test_case_name = "kiem_tra_xoa_san_pham_khoi_gio_hang"
-    thu_muc_ket_qua = tao_thu_muc_ket_qua(test_case_name)
-    
-    # Tạo báo cáo
-    reporter = TestReporter("Kiểm tra xóa sản phẩm khỏi giỏ hàng")
-    
-    # Tạo thư mục lưu ảnh
-    screenshot_dir = os.path.join(os.path.dirname(os.path.abspath(__file__)), 'screenshots')
-    os.makedirs(screenshot_dir, exist_ok=True)
-    
-    # URL sản phẩm mẫu
-    url_san_pham = "http://localhost/webbansach/san-pham.php?id=12"
-    
-    # Khởi tạo trình duyệt
-    driver = None
-    try:
-        # Sử dụng webdriver-manager để tự động tải và quản lý ChromeDriver
-        step = "Khởi tạo trình duyệt Chrome"
-        service = Service(ChromeDriverManager().install())
-        options = webdriver.ChromeOptions()
-        options.add_argument('--start-maximized')
-        
-        driver = webdriver.Chrome(service=service, options=options)
-        in_thong_bao(reporter, step, status='PASS')
-        
-        try:
-            # Thực hiện thêm sản phẩm vào giỏ hàng
-            if them_san_pham_vao_gio(driver, url_san_pham, reporter):
-                # Đợi một chút để đảm bảo sản phẩm được thêm vào giỏ
-                time.sleep(3)
-                
-                # Thông báo thêm sản phẩm thành công
-                in_thong_bao(reporter,
-                           "THÀNH CÔNG",
-                           status='PASS',
-                           input_data="Đã thêm sản phẩm vào giỏ hàng thành công!",
-                           expected="Hiển thị thông báo thêm vào giỏ hàng thành công")
-                
-                # Kiểm tra số lượng sản phẩm trong giỏ
-                try:
-                    # Thử tìm biểu tượng giỏ hàng với số lượng
-                    cart_count_element = WebDriverWait(driver, 5).until(
-                        EC.presence_of_element_located((By.CSS_SELECTOR, 
-                            ".cart-count, .cart-items-count, .count, .item-count, "
-                            "[class*='cart-count'], #cart-total, .cart-total, .cart-qty"
-                        ))
-                    )
-                    cart_count = cart_count_element.text.strip()
-                    in_thong_bao(reporter,
-                               "THÔNG TIN GIỎ HÀNG",
-                               status='PASS',
-                               input_data=f"Số lượng sản phẩm trong giỏ: {cart_count}",
-                               expected="Hiển thị số lượng sản phẩm trong giỏ")
-                    
-                except Exception as e:
-                    # Nếu không tìm thấy số lượng, thử đếm sản phẩm trong giỏ
-                    try:
-                        cart_items = driver.find_elements(By.CSS_SELECTOR, 
-                            ".cart-item, .cart_item, tr.cart_item, .product-item"
-                        )
-                        if cart_items:
-                            in_thong_bao(reporter,
-                                       "THÔNG TIN GIỎ HÀNG",
-                                       status='PASS',
-                                       input_data=f"Đã thêm thành công {len(cart_items)} sản phẩm vào giỏ",
-                                       expected="Hiển thị thông tin sản phẩm trong giỏ")
-                        else:
-                            in_thong_bao(reporter,
-                                       "THÔNG TIN GIỎ HÀNG",
-                                       status='INFO',
-                                       input_data="Sản phẩm đã được thêm vào giỏ. Vui lòng kiểm tra trang giỏ hàng.",
-                                       expected="Hiển thị thông tin giỏ hàng")
-                    except Exception as e2:
-                        in_thong_bao(reporter,
-                                   "THÔNG TIN GIỎ HÀNG",
-                                   status='INFO',
-                                   input_data="Đã thêm sản phẩm vào giỏ. Vui lòng kiểm tra giỏ hàng để xác nhận.",
-                                   expected="Hiển thị thông tin giỏ hàng")
-                
-                # Thử truy cập giỏ hàng
-                cart_urls = [
-                    "http://localhost/webbansach/gio-hang.php",
-                    "http://localhost/webbansach/cart",
-                    "http://localhost/webbansach/cart.php"
-                ]
-                
-                cart_loaded = False
-                last_error = None
-                
-                for url in cart_urls:
-                    try:
-                        driver.get(url)
-                        # Chờ một trong các phần tử của giỏ hàng xuất hiện
-                        WebDriverWait(driver, 10).until(
-                            EC.presence_of_element_located((
-                                By.CSS_SELECTOR,
-                                ".cart-table, .cart-empty, .cart-contents, .woocommerce-cart-form, #cart, .shopping-cart, .cart-container"
-                            ))
-                        )
-                        cart_loaded = True
-                        break
-                    except Exception as e:
-                        last_error = e
-                        continue
-                
-                if not cart_loaded:
-                    in_thong_bao(reporter,
-                               "Không thể tải trang giỏ hàng",
-                               status='ERROR',
-                               input_data=f"Đã thử các URL: {', '.join(cart_urls)}\nLỗi: {str(last_error)}\nNội dung trang: {driver.page_source[:500]}...",
-                               expected="Truy cập được trang giỏ hàng")
-                    return
-                
-                # Chụp ảnh màn hình giỏ hàng
-                screenshot = chup_man_hinh(driver)
-                
-                # Kiểm tra nội dung giỏ hàng
-                try:
-                    # Lưu lại nội dung trang để debug
-                    page_source = driver.page_source.lower()
-                    in_thong_bao(reporter,
-                               "Kiểm tra giỏ hàng",
-                               status='PASS' if 'giỏ hàng' in page_source else 'FAIL',
-                               input_data=f"Nội dung giỏ hàng: {page_source[:200]}...",
-                               expected="Có ít nhất 1 sản phẩm trong giỏ")
-                    
-                    # Kiểm tra và xóa sản phẩm khỏi giỏ hàng
-                    try:
-                        # Chụp ảnh trước khi xóa
-                        timestamp = datetime.now().strftime("%Y%m%d_%H%M%S")
-                        screenshot_before = os.path.join(screenshot_dir, f'before_delete_{timestamp}.png')
-                        chup_man_hinh(driver, screenshot_before)
-                        
-                        # Tìm và nhấn nút xóa sản phẩm
-                        try:
-                            # Tìm nút xóa (sử dụng XPath linh hoạt hơn)
-                            xpath_delete = "//a[contains(@class,'xoa')]//i[contains(@class,'fa-trash-alt')]"
-                            delete_button = WebDriverWait(driver, 10).until(
-                                EC.element_to_be_clickable((By.XPATH, xpath_delete))
-                            )
-                            
-                            # Cuộn đến nút xóa và highlight
-                            driver.execute_script("arguments[0].scrollIntoView({block: 'center'})", delete_button)
-                            highlight_element(driver, delete_button)
-                            
-                            # Nhấn nút xóa
-                            delete_button.click()
-                            
-                            # Chờ và xác nhận hộp thoại xóa
-                            try:
-                                WebDriverWait(driver, 5).until(EC.alert_is_present())
-                                alert = driver.switch_to.alert
-                                alert_text = alert.text
-                                alert.accept()
-                                
-                                print(f"Đã xác nhận hộp thoại: {alert_text}")
-                                
-                                # Chờ thông báo xóa thành công
-                                success_message = "Đã xóa sản phẩm khỏi giỏ hàng"
-                                try:
-                                    WebDriverWait(driver, 10).until(
-                                        EC.presence_of_element_located((By.XPATH, f"//*[contains(.,'{success_message}')]"))
-                                    )
-                                    
-                                    # Chờ cập nhật giỏ hàng
-                                    time.sleep(2)
-                                    
-                                    # Chụp ảnh sau khi xóa
-                                    screenshot_after = os.path.join(screenshot_dir, f'after_delete_{timestamp}.png')
-                                    chup_man_hinh(driver, screenshot_after)
-                                    
-                                    # Kiểm tra giỏ hàng trống
-                                    page_source_after = driver.page_source.lower()
-                                    if any(x in page_source_after for x in ['giỏ hàng của bạn đang trống', 'không có sản phẩm']):
-                                        in_thong_bao(reporter,
-                                                   "Xóa sản phẩm khỏi giỏ hàng",
-                                                   status='PASS',
-                                                   input_data=f"Đã xác nhận xóa sản phẩm\nTrạng thái: Thành công\nThông báo: {success_message}",
-                                                   expected="Xóa sản phẩm khỏi giỏ hàng thành công")
-                                        
-                                        # Lưu báo cáo
-                                        report_name = f"{test_case_name}_{timestamp}.xlsx"
-                                        report_path = os.path.join(thu_muc_ket_qua, report_name)
-                                        
-                                        # Thêm ảnh kết quả cuối cùng vào báo cáo
-                                        try:
-                                            # Chụp ảnh màn hình kết quả
-                                            result_screenshot = os.path.join(screenshot_dir, f'final_result_{timestamp}.png')
-                                            chup_man_hinh(driver, result_screenshot)
-                                            
-                                            # Thêm ảnh kết quả vào báo cáo
-                                            in_thong_bao(reporter,
-                                                       "Kết quả cuối cùng",
-                                                       status='PASS',
-                                                       input_data="Xóa sản phẩm khỏi giỏ hàng thành công",
-                                                       expected="Giỏ hàng trống sau khi xóa",
-                                                       screenshot=result_screenshot)
-                                            
-                                            # Lưu báo cáo
-                                            reporter.save_report(report_path)
-                                            print(f"\nĐã lưu báo cáo kết quả kiểm thử tại: {report_path}")
-                                            
-                                        except Exception as e:
-                                            print(f"Lỗi khi lưu báo cáo: {str(e)}")
-                                        
-                                    else:
-                                        in_thong_bao(reporter,
-                                                   "Kiểm tra xóa sản phẩm",
-                                                   status='FAIL',
-                                                   input_data="Đã xác nhận xóa nhưng giỏ hàng chưa cập nhật",
-                                                   expected="Giỏ hàng phải trống sau khi xóa sản phẩm")
-                                        
-                                except Exception as thong_bao_loi:
-                                    error_msg = f"Không tìm thấy thông báo xóa: {str(thong_bao_loi)}\nNội dung trang: {driver.page_source[:500]}..."
-                                    print(error_msg)
-                                    in_thong_bao(reporter,
-                                               "Lỗi khi chờ thông báo xóa",
-                                               status='ERROR',
-                                               input_data=error_msg,
-                                               expected=f"Xuất hiện thông báo: {success_message}")
-                                    
-                            except Exception as alert_loi:
-                                error_msg = f"Lỗi hộp thoại xác nhận: {str(alert_loi)}\nNội dung trang: {driver.page_source[:500]}..."
-                                print(error_msg)
-                                in_thong_bao(reporter,
-                                           "Lỗi hộp thoại xác nhận",
-                                           status='ERROR',
-                                           input_data=error_msg,
-                                           expected="Xuất hiện hộp thoại xác nhận xóa sản phẩm")
-                            
-                        except Exception as tim_nut_loi:
-                            error_msg = f"Không tìm thấy nút xóa: {str(tim_nut_loi)}\nNội dung trang: {driver.page_source[:500]}..."
-                            print(error_msg)
-                            in_thong_bao(reporter,
-                                       "Không tìm thấy nút xóa",
-                                       status='ERROR',
-                                       input_data=error_msg,
-                                       expected="Tìm thấy nút xóa sản phẩm")
-                            
-                    except Exception as xoa_loi:
-                        error_msg = f"Lỗi khi xóa sản phẩm: {str(xoa_loi)}\nNội dung trang: {driver.page_source[:500]}..."
-                        print(error_msg)
-                        in_thong_bao(reporter,
-                                   "Lỗi khi xóa sản phẩm khỏi giỏ hàng",
-                                   status='ERROR',
-                                   input_data=error_msg,
-                                   expected="Xóa sản phẩm khỏi giỏ hàng thành công")
-                    
-                except Exception as check_error:
-                    in_thong_bao(reporter,
-                               "Lỗi khi kiểm tra giỏ hàng",
-                               status='ERROR',
-                               input_data=f"{str(check_error)}\nNội dung trang: {driver.page_source[:500]}...",
-                               expected="Kiểm tra được nội dung giỏ hàng",
-                               screenshot=screenshot)
-                    
-                except Exception as nav_error:
-                    in_thong_bao(reporter,
-                               "Lỗi khi điều hướng đến giỏ hàng",
-                               status='ERROR',
-                               input_data=str(nav_error),
-                               expected="Điều hướng thành công đến trang giỏ hàng")
-            else:
-                in_thong_bao(reporter, 
-                           "Không thể thêm sản phẩm vào giỏ hàng", 
-                           status='FAIL',
-                           input_data="Kiểm tra nút thêm vào giỏ",
-                           expected="Thêm sản phẩm vào giỏ hàng thành công")
-                
-        except Exception as e:
-            error_msg = f"Lỗi khi thực hiện kiểm thử: {str(e)}"
-            print(error_msg)
-            in_thong_bao(reporter, 
-                        "Lỗi khi thực hiện kiểm thử", 
-                        status='ERROR',
-                        input_data=error_msg,
-                        expected="Hoàn thành kiểm thử không có lỗi")
-        
-        except Exception as e:
-            error_msg = f"Lỗi không mong muốn trong quá trình kiểm thử: {str(e)}"
-            in_thong_bao(reporter, f"Lỗi trong quá trình kiểm thử: {str(e)}", status='FAIL')
-            
-    except Exception as e:
-        error_msg = f"Lỗi khi khởi tạo trình duyệt: {str(e)}"
-        in_thong_bao(reporter, f"Lỗi nghiêm trọng: {str(e)}", status='FAIL')
-        return
-        
-    finally:
-        # Nếu chưa lưu báo cáo (trường hợp xảy ra lỗi trước khi lưu)
-        if not os.path.exists(report_path):
-            try:
-                # Chụp ảnh màn hình lỗi
-                error_screenshot = os.path.join(screenshot_dir, f'error_{timestamp}.png')
-                chup_man_hinh(driver, error_screenshot)
-                
-                # Thêm thông báo lỗi vào báo cáo
-                in_thong_bao(reporter,
-                           "Kết thúc kiểm thử (có lỗi)",
-                           status='ERROR',
-                           input_data=f"Đã xảy ra lỗi trong quá trình kiểm thử\nThời gian chạy: {datetime.now() - test_start_time}",
-                           expected="Hoàn thành kiểm thử thành công",
-                           screenshot=error_screenshot)
-                
-                # Lưu báo cáo lỗi
-                error_report_name = f"{test_case_name}_ERROR_{timestamp}.xlsx"
-                error_report_path = os.path.join(thu_muc_ket_qua, error_report_name)
-                reporter.save_report(error_report_path)
-                print(f"\nĐã lưu báo cáo lỗi tại: {error_report_path}")
-                
-            except Exception as e:
-                print(f"Không thể lưu báo cáo lỗi: {str(e)}")
-        
-        # Đóng trình duyệt nếu chưa đóng
-        if driver is not None:
-            driver.quit()
-            in_thong_bao(reporter, "Đã đóng trình duyệt")
-        
-        in_thong_bao(reporter, "Kết thúc chương trình")
 
 def main():
+    print("="*80)
+    print("KIỂM TRA TÍNH NĂNG XÓA SẢN PHẨM KHỎI GIỎ HÀNG")
+    print("="*80)
+    
     # Tạo thư mục lưu kết quả
     test_start_time = datetime.now()
     timestamp = test_start_time.strftime("%Y%m%d_%H%M%S")
@@ -743,14 +436,11 @@ def main():
     thu_muc_ket_qua = tao_thu_muc_ket_qua(test_case_name)
     
     # Tạo báo cáo
-    reporter = TestReporter("Kiểm tra xóa sản phẩm khỏi giỏ hàng")
+    reporter = TestReporter(test_case_name)
     
     # Tạo thư mục lưu ảnh
-    screenshot_dir = os.path.join(os.path.dirname(os.path.abspath(__file__)), 'screenshots')
+    screenshot_dir = os.path.join(thu_muc_ket_qua, 'screenshots')
     os.makedirs(screenshot_dir, exist_ok=True)
-    
-    # URL sản phẩm mẫu - sử dụng sản phẩm có ID 12
-    url_san_pham = "http://localhost/webbansach/san-pham.php?id=12"
     
     # Khởi tạo trình duyệt
     driver = None
@@ -763,41 +453,86 @@ def main():
         service = Service(ChromeDriverManager().install())
         driver = webdriver.Chrome(service=service, options=options)
         
+        in_thong_bao(reporter, "Khởi tạo trình duyệt Chrome", status='PASS',
+                    input_data="Chrome WebDriver",
+                    output="Trình duyệt đã khởi động",
+                    expected="Trình duyệt khởi động thành công")
+        
+        # Lấy sản phẩm ngẫu nhiên từ trang chủ
+        in_thong_bao(reporter, "Lấy sản phẩm ngẫu nhiên", status='INFO',
+                    input_data="Tìm kiếm sản phẩm từ trang chủ",
+                    output="Đang tìm kiếm sản phẩm...",
+                    expected="Lấy được 1 sản phẩm ngẫu nhiên")
+        
+        products = lay_san_pham_ngau_nhien(driver, so_luong=1)
+        if not products:
+            in_thong_bao(reporter, "Không tìm thấy sản phẩm", status='FAIL',
+                        input_data="Tìm kiếm sản phẩm",
+                        output="Không tìm thấy sản phẩm nào",
+                        expected="Tìm thấy ít nhất 1 sản phẩm")
+            return
+        
+        product = products[0]
+        url_san_pham = product['url']
+        ten_san_pham = product['name']
+        
+        in_thong_bao(reporter, f"Đã chọn sản phẩm: {ten_san_pham}", status='PASS',
+                    input_data=f"URL: {url_san_pham}",
+                    output=f"Sản phẩm: {ten_san_pham} (ID: {product['id']})",
+                    expected="Chọn được sản phẩm ngẫu nhiên")
+        
         # Thêm sản phẩm vào giỏ hàng
-        them_san_pham_vao_gio(driver, url_san_pham, reporter)
-        
-        # Kiểm tra giỏ hàng
-        kiem_tra_gio_hang(driver, reporter, screenshot_dir)
-        
-        # Lưu báo cáo thành công
-        report_name = f"ket_qua_{test_case_name}_{timestamp}.xlsx"
-        report_path = os.path.join(thu_muc_ket_qua, report_name)
-        reporter.save_report(report_path)
-        print(f"\nĐã lưu báo cáo kết quả kiểm thử tại: {report_path}")
+        if them_san_pham_vao_gio(driver, url_san_pham, reporter, screenshot_dir, ten_san_pham):
+            # Kiểm tra giỏ hàng và xóa sản phẩm
+            kiem_tra_gio_hang(driver, reporter, screenshot_dir, ten_san_pham)
+        else:
+            in_thong_bao(reporter, "Không thể thêm sản phẩm vào giỏ hàng", status='FAIL',
+                        input_data=f"Sản phẩm: {ten_san_pham}",
+                        output="Không thể thêm sản phẩm vào giỏ hàng",
+                        expected="Thêm sản phẩm vào giỏ hàng thành công")
         
     except Exception as e:
         error_msg = f"Lỗi không mong muốn trong quá trình kiểm thử: {str(e)}"
-        in_thong_bao(reporter, f"Lỗi trong quá trình kiểm thử: {str(e)}", status='FAIL')
+        screenshot_path_error = luu_screenshot(driver, screenshot_dir, 'error_test') if driver else None
         
-        # Lưu báo cáo lỗi
-        try:
-            error_report_name = f"{test_case_name}_ERROR_{timestamp}.xlsx"
-            error_report_path = os.path.join(thu_muc_ket_qua, error_report_name)
-            reporter.save_report(error_report_path)
-            print(f"\nĐã lưu báo cáo lỗi tại: {error_report_path}")
-        except Exception as e:
-            print(f"Không thể lưu báo cáo lỗi: {str(e)}")
+        in_thong_bao(reporter, "Lỗi trong quá trình kiểm thử", status='FAIL',
+                    input_data="Thực hiện test case",
+                    output=error_msg,
+                    expected="Hoàn thành test case không có lỗi",
+                    screenshot_path=screenshot_path_error)
             
     finally:
+        # Chụp ảnh màn hình cuối cùng
+        final_screenshot_path = None
+        try:
+            if driver:
+                final_screenshot_path = os.path.join(thu_muc_ket_qua, f'final_screenshot_{int(time.time())}.png')
+                driver.save_screenshot(final_screenshot_path)
+        except Exception as e:
+            print(f"Không thể chụp ảnh màn hình cuối cùng: {str(e)}")
+        
+        # Lưu báo cáo với ảnh chụp màn hình cuối cùng
+        if final_screenshot_path:
+            reporter.add_final_screenshot(final_screenshot_path, "Ảnh chụp màn hình cuối cùng")
+        
+        report_path = reporter.save_report(thu_muc_ket_qua)
+        print(f"\nĐã lưu báo cáo kết quả kiểm thử tại: {report_path}")
+        
         # Đóng trình duyệt nếu chưa đóng
         if driver is not None:
             try:
                 driver.quit()
-                in_thong_bao(reporter, "Đã đóng trình duyệt")
+                in_thong_bao(reporter, "Đã đóng trình duyệt", status='INFO',
+                            input_data="Đóng trình duyệt",
+                            output="Trình duyệt đã đóng",
+                            expected="Đóng trình duyệt thành công")
             except:
                 pass
         
-        in_thong_bao(reporter, "Kết thúc chương trình")
+        in_thong_bao(reporter, "Kết thúc chương trình", status='INFO',
+                    input_data="",
+                    output="Test case hoàn tất",
+                    expected="Hoàn thành test case")
 
 if __name__ == "__main__":
     main()
