@@ -1,0 +1,13 @@
+# Python Caches
+__pycache__/
+*.pyc
+
+# Test Results and Screenshots
+**/kết quả test/
+**/screenshots/
+*.png
+*.jpg
+*.xlsx
+
+# Temporary Files
+*~$*
